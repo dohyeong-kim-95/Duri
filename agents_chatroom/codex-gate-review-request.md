@@ -16,8 +16,7 @@
 
 Can proceed without a new Gate request:
 
-- Further read-only Timeline UI integration
-- Further read-only Search UI integration
+- Further read-only Timeline/Search UI refinement
 - Derived index/cache reads or rebuilds from `DuriStorage/`
 
 Requires Gate review before implementation:
@@ -46,5 +45,5 @@ Starting checklist for that future review:
 ## Current Action
 
 No Fable review is being requested by this file at this moment. Initial read-only
-Timeline/Search API connection is implemented. Codex must update this file before
-any future Gate 대상 implementation review request.
+Timeline/Search API connection and frontend shell are implemented. Codex must
+update this file before any future Gate 대상 implementation review request.

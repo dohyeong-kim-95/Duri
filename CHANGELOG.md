@@ -6,6 +6,35 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Frontend Timeline/Search Shell — 2026-07-03
+
+Gate 불필요 read-only UI integration 반영.
+
+### Added
+
+- Frontend Timeline/Search client shell
+- Typed Timeline/Search API client helpers
+- Access-token handoff point via local browser storage for future auth flow
+- API helper tests for authenticated read requests and display formatting
+
+### Changed
+
+- Initial scaffold UI를 read-only Timeline 중심 화면으로 정리
+- Styling을 조용한 내부 도구 레이아웃으로 조정
+
+### Guardrails
+
+- No registration/login HTTP auth endpoint added
+- No photo upload persistence added
+- No original-data write path added
+
+### Verification
+
+- Frontend tests: `8 passed`
+- Frontend lint/typecheck/build passed
+
+---
+
 ## Read-only Timeline/Search Connection — 2026-07-03
 
 Step 3 Gate 종료 후 진행 가능한 비-Gate 범위 반영.

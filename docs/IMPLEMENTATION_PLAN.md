@@ -157,7 +157,7 @@ Notes:
 
 ### Step 4 — Timeline and Search
 
-Status: initial read-only API connection implemented.
+Status: initial read-only API and frontend shell implemented.
 
 Expected behavior:
 
@@ -168,6 +168,8 @@ Expected behavior:
   rebuildable indexes.
 - Initial implementation reads canonical `metadata.json` files directly from
   `DuriStorage/` and requires AuthService access validation.
+- Frontend shell can call the read-only APIs when a future auth flow provides an
+  access token.
 
 Gate boundary:
 
