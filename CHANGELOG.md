@@ -6,6 +6,36 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Storage Writer Gate Review Request — 2026-07-03
+
+Fable Gate Acceptance Spec v1의 Step 2 Storage Writer(A1~A5) 반영.
+
+### Added
+
+- `agents_chatroom/fable-gate-acceptance-spec.md` 기록
+- `apps/api/src/duri_api/storage.py` 내부 Storage Writer 모듈 추가
+- `apps/api/tests/gate_spec/test_storage_writer.py` 추가
+- `pytest` marker `gate_spec` 등록
+
+### Tested Behaviors
+
+- 원본 사진 바이트와 MediaRef 크기/해시 일치
+- temp file + atomic rename 기반 사진/metadata write
+- `messages.md` 재생성 실패가 canonical data를 손상하지 않음
+- `messages.md` 삭제 후 metadata에서 재생성 가능
+- SQLite timeline index를 `DuriStorage/`에서 재구축 가능
+- participants display-name map 포함
+- orphan media 재수록 및 기존 metadata 보존
+- 같은 월 파티션 동시 쓰기 직렬화
+- `created_at` 기준 월 파티션 규칙과 EXIF `captured_at` 비우선 규칙
+
+### Gate
+
+- Storage Writer는 Gate 대상 구현이다.
+- Fable review 요청 상태이며, 통과 전까지 제품 동작으로 확정하지 않는다.
+
+---
+
 ## Initial Tech Stack Scaffold — 2026-07-03
 
 CEO Decision: Initial Tech Stack 반영.

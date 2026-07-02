@@ -5,6 +5,43 @@
 
 ---
 
+# 7차 심사 — 2026-07-03, commit `82ad28a` (Scaffold 코드베이스 전체 점검)
+
+- Scope: CEO 요청에 의한 코드베이스 전수 점검 (Gate request 아님 — Codex는
+  자율 범위로 올바르게 자기 분류했고, 점검 결과 그 판단이 맞았다)
+
+## Verdict: 이상 없음 — Gate 경계 준수 확인
+
+- **Gate 경계** ✓ — 원본 쓰기·인증·백업 코드는 전혀 없다. 구현된 것은
+  scaffold(Next.js/FastAPI), `/health`, `/ws/probe`, 하드코딩 더미 데이터의
+  read-only Timeline shell, CI 파이프라인뿐 — 전부 자율 범위다.
+  IMPLEMENTATION_PLAN §2가 Gate 경계를 정확히 문서화했고 Step 2·3을
+  "Fable Spec 대기"로 명시했다.
+- **스택 결정** — CEO 직접 결정(TypeScript+Next.js / Python+FastAPI /
+  SQLite 인덱스 / `DuriStorage/` = source of truth)이 근거·기각 대안과 함께
+  IMPLEMENTATION_PLAN에 기록됨. ADR-001/004/005/007과 정합.
+- **검증 실행** ✓ — Fable 환경에서 backend pytest 2건 통과, uvicorn 기동 후
+  `/health` 실응답 확인 (Codex 환경의 포트 접근 문제는 코드 결함 아님을 확인).
+  원격 CI 녹색은 CEO가 확인.
+- **보호 장치** ✓ — `.gitignore`가 `DuriStorage/`·`*.sqlite`·`data/` 등을
+  차단해 실제 추억 데이터가 코드 저장소에 커밋될 수 없다. 테스트 이름이
+  행위 문장 규칙을 이미 따르고 있다.
+- **npm audit (Next 경유 PostCSS moderate)** — `--force` 미적용은 옳은 판단
+  (Next 대폭 다운그레이드 유발). 빌드 도구 체인 이슈로 2인 앱 런타임 노출
+  아님. Next 패치 릴리스 시 갱신할 것 — 구현 Gate 때 재확인 항목.
+- 사소한 메모 (수정 불요, 배포 시점 확인): CORS가 `localhost:3000` 고정 —
+  실배포 도메인 반영 필요. `getWebSocketProbeUrl`이 base path를 버리므로
+  경로 프리픽스 뒤 배포 시 조정 필요.
+
+## Gate Acceptance Spec 발행
+
+스택 확정에 따라 `fable-gate-acceptance-spec.md` v1을 발행했다.
+Storage Writer(A1~A5, 13개 항목)와 Auth/Session(B1~B4, 12개 항목).
+Codex는 Step 2부터 이 Spec의 테스트를 먼저 작성해 실패를 확인한 뒤
+구현을 시작할 수 있다.
+
+---
+
 # CEO 최종 승인 — 2026-07-03 (Storage Layout RFC 0001)
 
 CEO가 6차 심사(Pass) 결과를 확인하고 **RFC 0001 → Accepted 전환을 승인**했다.

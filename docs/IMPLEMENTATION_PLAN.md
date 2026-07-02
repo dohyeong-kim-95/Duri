@@ -94,16 +94,16 @@ Approved implementation scope:
 
 Not yet approved for implementation:
 
-- original storage writes
 - authentication/device sessions
 - photo upload persistence
-- metadata write path
+- public photo upload endpoint
+- backup/export implementation
 
 ### Step 2 — Storage Writer TDD
 
-Status: wait for Fable Gate Acceptance Spec.
+Status: implemented from Fable Gate Acceptance Spec v1; Gate review requested.
 
-Expected test subjects:
+Implemented test subjects:
 
 - Media writes use temp file, hash/size verification, then atomic rename.
 - Monthly `metadata.json` is rewritten via temp file and atomic rename.
@@ -111,6 +111,15 @@ Expected test subjects:
 - A failed `messages.md` regeneration does not corrupt canonical storage.
 - Orphan media recovery is defined and tested.
 - Monthly partition writes are serialized.
+
+Notes:
+
+- Spec tests live in `apps/api/tests/gate_spec/test_storage_writer.py`.
+- Tests are marked with `pytest.mark.gate_spec`.
+- Initial red test was confirmed before implementation:
+  `ModuleNotFoundError: No module named 'duri_api.storage'`.
+- The writer is internal backend code only; it is not yet exposed through public upload
+  endpoints.
 
 ### Step 3 — Auth and Session TDD
 
