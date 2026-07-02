@@ -73,9 +73,11 @@ Current draft: [docs/rfc/0001-storage-layout.md](docs/rfc/0001-storage-layout.md
 
 구현 착수 전, Storage Layout RFC에서 다음을 다룬다.
 
+- Export 최상위 폴더 이름: `DuriStorage/`
 - VaultFolder 큐레이션의 Export 표현 방식
 - `Vault/` 루트 이름과 `VaultFolder` 엔터티의 용어 충돌 해소
 - 파일명 규칙, 월/일 분할 기준, `metadata.json` 쓰기 무결성 전략
+- Auth/User/Device 운영 정보는 Export에서 제외
 
 ---
 

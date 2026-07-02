@@ -6,13 +6,25 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## RFC 0001 Draft Update — 2026-07-03
+
+CEO clarification 반영.
+
+### Changed
+
+- Export 최상위 폴더 이름을 `DuriArchive/`에서 `DuriStorage/`로 변경
+- Auth/User/Device 운영 정보는 Export에서 전면 제외하도록 정리
+- VaultFolder Export 질문을 앱 내부 큐레이션과 외부 내보내기 패키지 기준으로 재작성
+
+---
+
 ## RFC 0001 Draft — 2026-07-02
 
 Storage Layout RFC 초안 작성.
 
 ### Added
 
-- `docs/rfc/0001-storage-layout.md` — `DuriArchive/` 루트, Timeline 월별 원본,
+- `docs/rfc/0001-storage-layout.md` — `DuriStorage/` 루트, Timeline 월별 원본,
   VaultFolder 큐레이션 Export, Message canonical source, `metadata.json`
   쓰기 무결성 전략 초안
 - README Phase 3 상태 갱신

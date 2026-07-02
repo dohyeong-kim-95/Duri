@@ -2,11 +2,12 @@
 
 - Status: Draft
 - Date: 2026-07-02
+- Updated: 2026-07-03
 - Related: PRD v0.2.4, DATA_MODEL v0.3, ADR-001, ADR-007
 
 ## Summary
 
-Duri의 Export v1 저장 구조를 `DuriArchive/` 아래에 두고, Timeline 월별 원본
+Duri의 Export v1 저장 구조를 `DuriStorage/` 아래에 두고, Timeline 월별 원본
 묶음과 VaultFolder 사용자 큐레이션을 분리한다.
 
 이 RFC는 구현 전 논의 초안이다. Accepted 전까지 파일명 규칙, 디렉토리 규칙,
@@ -30,19 +31,20 @@ ADR-007은 "저장 구조 자체가 Export"라고 결정했다. 따라서 구현
 
 ### 1. Root Name
 
-Export 루트는 `Vault/`가 아니라 `DuriArchive/`로 한다.
+Export 루트는 `Vault/`가 아니라 `DuriStorage/`로 한다.
 
 이유:
 
 - `VaultFolder`는 사용자가 직접 만든 큐레이션 엔터티다.
 - Export 전체 루트를 `Vault/`라고 부르면 Timeline 원본 아카이브와 사용자
   VaultFolder가 섞여 보인다.
-- `DuriArchive/`는 앱 전체 원본 보관소라는 의미가 더 명확하다.
+- `DuriStorage/`는 사용자가 파일 탐색기로 열었을 때 "Duri의 원본 저장소"라는
+  의미가 명확하다.
 
 ### 2. Top-Level Layout
 
 ```text
-DuriArchive/
+DuriStorage/
   timeline/
     2026/
       2026-07/
@@ -228,7 +230,7 @@ Rules:
 
 ### 9. Auth Export Boundary
 
-Auth operating data is excluded from `DuriArchive/`.
+Auth operating data is excluded from `DuriStorage/`.
 
 Excluded:
 
@@ -237,11 +239,17 @@ Excluded:
 - Access tokens
 - Device fingerprint hashes
 
-Allowed, if needed:
+Also excluded:
 
-- Human-readable user display names
-- Human-readable device labels
-- Revocation status summaries without secrets
+- User display names
+- Device labels
+- Revocation status summaries
+
+Rule:
+
+- Export authorization happens before export creation.
+- `DuriStorage/` does not contain login/session/device audit data.
+- It is enough that the export action is allowed only for one of the two registered users.
 
 ### 10. Write Integrity Strategy
 
@@ -306,11 +314,12 @@ because DATA_MODEL v0.3 already names it as canonical.
 
 ## Open Questions
 
-1. Should `DuriArchive/` be the final root name, or should it be configurable?
-2. Is month-level `metadata.json` sufficient for MVP, or should we start with per-day partitions?
-3. Should `vault/folders/<id>/` include generated copied media bundles as an optional View, or only references?
-4. What exact filesystem durability guarantees are required on the target deployment server?
-5. Should device/user display summaries be exported at all, or should `DuriArchive/` contain only memory data?
+1. Is month-level `metadata.json` sufficient for MVP, or should we start with per-day partitions?
+2. VaultFolder is the app-internal curation folder such as "부산 여행" or "2026 여름".
+   When exporting the whole `DuriStorage/` folder, should each VaultFolder contain only
+   references (`folder.json`, `index.md`, `log_ids`), or should Duri also generate a
+   separate easy-browsing package that copies the actual photos/messages into that folder?
+3. What exact filesystem durability guarantees are required on the target deployment server?
 
 ## Gate Notes
 
