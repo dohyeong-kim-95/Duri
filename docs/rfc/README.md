@@ -50,8 +50,6 @@ RFC 자체는 논의 과정의 기록으로 보존한다(합의 후에도 삭제
 
 ## Index
 
-현재 등록된 RFC가 없다. 첫 RFC가 작성되면 이 표에 추가한다.
-
 | No. | Title | Status | Date |
 |-----|-------|--------|------|
-| —   | —     | —      | —    |
+| [0001](./0001-storage-layout.md) | Storage Layout | Draft | 2026-07-02 |

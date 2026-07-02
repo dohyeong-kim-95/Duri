@@ -6,6 +6,19 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## RFC 0001 Draft — 2026-07-02
+
+Storage Layout RFC 초안 작성.
+
+### Added
+
+- `docs/rfc/0001-storage-layout.md` — `DuriArchive/` 루트, Timeline 월별 원본,
+  VaultFolder 큐레이션 Export, Message canonical source, `metadata.json`
+  쓰기 무결성 전략 초안
+- README Phase 3 상태 갱신
+
+---
+
 ## PRD v0.2.4 — 2026-07-02
 
 CEO Decisions for DATA_MODEL과 PRD 표현 정합성 반영. Fable Gate Review와
