@@ -6,6 +6,30 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Storage Writer C1/C2 Re-review Request — 2026-07-03
+
+Fable 8차 심사 Conditional Pass 조건 반영.
+
+### Added
+
+- Gate Acceptance Spec v1.1 반영
+- A2-4 테스트: rename 전 temp media size/sha256 검증
+- A5-4 테스트: mixed timezone 입력의 app timezone 정규화와 실제 시각순 정렬
+
+### Changed
+
+- `created_at`과 `ingested_at`을 저장 시점에 앱 타임존으로 정규화
+- 사진 temp 파일을 rename하기 전에 업로드 원본 바이트와 size/sha256 비교
+- Gate review 요청 문서를 C1/C2 재심사 요청으로 갱신
+
+### Verification
+
+- A2-4/A5-4 red 확인 후 green 전환
+- Backend gate spec: `16 passed`
+- Backend tests: `18 passed`
+
+---
+
 ## Storage Writer Gate Review Request — 2026-07-03
 
 Fable Gate Acceptance Spec v1의 Step 2 Storage Writer(A1~A5) 반영.

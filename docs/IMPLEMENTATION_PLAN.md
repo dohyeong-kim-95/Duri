@@ -101,7 +101,7 @@ Not yet approved for implementation:
 
 ### Step 2 — Storage Writer TDD
 
-Status: implemented from Fable Gate Acceptance Spec v1; Gate review requested.
+Status: implemented from Fable Gate Acceptance Spec v1.1; C1/C2 re-review requested.
 
 Implemented test subjects:
 
@@ -111,13 +111,18 @@ Implemented test subjects:
 - A failed `messages.md` regeneration does not corrupt canonical storage.
 - Orphan media recovery is defined and tested.
 - Monthly partition writes are serialized.
+- Temp media is verified by size/sha256 before atomic rename.
+- `created_at` and `ingested_at` are normalized into app timezone before storage.
 
 Notes:
 
-- Spec tests live in `apps/api/tests/gate_spec/test_storage_writer.py`.
+- Spec v1.1 tests live in `apps/api/tests/gate_spec/test_storage_writer.py`.
 - Tests are marked with `pytest.mark.gate_spec`.
 - Initial red test was confirmed before implementation:
   `ModuleNotFoundError: No module named 'duri_api.storage'`.
+- C1/C2 red tests were confirmed after Spec v1.1:
+  corrupted temp media did not fail before rename, and mixed timezone logs sorted
+  incorrectly before normalization.
 - The writer is internal backend code only; it is not yet exposed through public upload
   endpoints.
 

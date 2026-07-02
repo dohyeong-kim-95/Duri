@@ -225,6 +225,37 @@ def test_a2_3_messages_regeneration_failure_does_not_affect_metadata_or_photos(
 
 
 @pytest.mark.gate_spec(
+    "A2-4. 원자적 rename 직전의 temp 파일 내용이 업로드된 원본 바이트와 다르면(손상 시뮬레이션) 쓰기가 실패하고 `photos/`에 파일이 남지 않는다 — RFC 0001 §10 2단계(\"hash/size 검증 후 rename\") 준수. *(v1.1 추가)*"
+)
+def test_a2_4_corrupted_temp_file_fails_before_rename_and_leaves_no_photo(
+    tmp_path: Path,
+) -> None:
+    """A2-4. 원자적 rename 직전의 temp 파일 내용이 업로드된 원본 바이트와 다르면(손상 시뮬레이션) 쓰기가 실패하고 `photos/`에 파일이 남지 않는다 — RFC 0001 §10 2단계("hash/size 검증 후 rename") 준수. *(v1.1 추가)*"""
+
+    def corrupt_temp_file(temp_path: Path, _final_path: Path) -> None:
+        temp_path.write_bytes(b"corrupted bytes")
+
+    writer = make_writer(
+        tmp_path,
+        hooks=StorageWriteHooks(before_media_rename=corrupt_temp_file),
+    )
+
+    with pytest.raises(StorageWriteError):
+        writer.append_photo(
+            log_id="01J_PHOTO_A2_4",
+            actor_id="01J_USER_1",
+            created_at=dt("2026-07-12T19:30:22+09:00"),
+            photo_bytes=b"original bytes before corruption",
+            original_filename="corrupted-before-rename.jpg",
+            mime_type="image/jpeg",
+        )
+
+    photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
+    assert not photos_dir.exists() or list(photos_dir.iterdir()) == []
+    assert not (tmp_path / "timeline" / "2026" / "2026-07" / "metadata.json").exists()
+
+
+@pytest.mark.gate_spec(
     "A3-1. `messages.md`를 삭제한 뒤 `metadata.json`에서 동일한 내용으로 재생성할 수 있다."
 )
 def test_a3_1_messages_markdown_can_be_regenerated_from_metadata(tmp_path: Path) -> None:
@@ -424,3 +455,45 @@ def test_a5_3_photo_partition_uses_created_at_even_when_exif_captured_at_differs
 
     assert read_metadata(tmp_path, "2026-07")["logs"][0]["id"] == "01J_PHOTO_A5_3"  # type: ignore[index]
     assert not (tmp_path / "timeline" / "2026" / "2026-06" / "metadata.json").exists()
+
+
+@pytest.mark.gate_spec(
+    "A5-4. 서로 다른 타임존 표기(예: UTC와 +09:00)로 도착한 Log들이 **실제 시각 순서대로** Timeline에 정렬되고, `metadata.json`의 `created_at`과 `messages.md`의 시각 표기는 앱 타임존으로 일관된다. *(v1.1 추가 — 8차 심사에서 결함 실증됨)*"
+)
+def test_a5_4_mixed_timezone_logs_are_normalized_and_sorted_in_app_timezone(
+    tmp_path: Path,
+) -> None:
+    """A5-4. 서로 다른 타임존 표기(예: UTC와 +09:00)로 도착한 Log들이 **실제 시각 순서대로** Timeline에 정렬되고, `metadata.json`의 `created_at`과 `messages.md`의 시각 표기는 앱 타임존으로 일관된다. *(v1.1 추가 — 8차 심사에서 결함 실증됨)*"""
+    writer = make_writer(tmp_path)
+
+    writer.append_message(
+        log_id="01J_MSG_KST_FIRST",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:28:00+09:00"),
+        message_id="01J_MESSAGE_KST_FIRST",
+        text="먼저 온 KST 메시지",
+    )
+    writer.append_message(
+        log_id="01J_MSG_UTC_SECOND",
+        actor_id="01J_USER_2",
+        created_at=dt("2026-07-12T10:28:01+00:00"),
+        message_id="01J_MESSAGE_UTC_SECOND",
+        text="1초 뒤 UTC 메시지",
+    )
+
+    metadata = read_metadata(tmp_path, "2026-07")
+    assert [log["id"] for log in metadata["logs"]] == [  # type: ignore[index]
+        "01J_MSG_KST_FIRST",
+        "01J_MSG_UTC_SECOND",
+    ]
+    assert [log["created_at"] for log in metadata["logs"]] == [  # type: ignore[index]
+        "2026-07-12T19:28:00+09:00",
+        "2026-07-12T19:28:01+09:00",
+    ]
+
+    messages = (
+        tmp_path / "timeline" / "2026" / "2026-07" / "messages.md"
+    ).read_text(encoding="utf-8")
+    assert "19:28 — Dohyeong\n: 먼저 온 KST 메시지" in messages
+    assert "19:28 — Partner\n: 1초 뒤 UTC 메시지" in messages
+    assert "10:28" not in messages

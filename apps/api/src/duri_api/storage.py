@@ -114,6 +114,7 @@ class DuriStorageWriter:
                 _write_bytes_durable(temp_path, photo_bytes)
                 if self.hooks.before_media_rename is not None:
                     self.hooks.before_media_rename(temp_path, final_path)
+                _verify_file_matches_bytes(temp_path, photo_bytes)
                 os.replace(temp_path, final_path)
                 _fsync_directory(photos_dir)
             except Exception as exc:
@@ -300,8 +301,8 @@ class DuriStorageWriter:
         return {
             "id": log_id,
             "type": log_type,
-            "created_at": _isoformat(created_at),
-            "ingested_at": _isoformat(ingested),
+            "created_at": _isoformat(_as_app_datetime(created_at, self._timezone)),
+            "ingested_at": _isoformat(_as_app_datetime(ingested, self._timezone)),
             "actor_id": actor_id,
             "source": source,
         }
@@ -472,6 +473,15 @@ def _write_bytes_durable(path: Path, payload: bytes) -> None:
         file.write(payload)
         file.flush()
         os.fsync(file.fileno())
+
+
+def _verify_file_matches_bytes(path: Path, expected: bytes) -> None:
+    actual = path.read_bytes()
+    if len(actual) != len(expected):
+        raise StorageWriteError("temp media size mismatch before atomic rename")
+
+    if hashlib.sha256(actual).digest() != hashlib.sha256(expected).digest():
+        raise StorageWriteError("temp media hash mismatch before atomic rename")
 
 
 def _write_text_durable(path: Path, payload: str) -> None:

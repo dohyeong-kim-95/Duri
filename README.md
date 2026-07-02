@@ -81,8 +81,9 @@ CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 p
 공백 검사와 Markdown 로컬 링크 검사를 실행한다. Fable Gate Acceptance Spec이
 도착하면 해당 테스트를 이 CI에 추가한 뒤 Gate review를 요청한다.
 
-Storage Writer Step 2는 Fable Gate Acceptance Spec A1~A5를 테스트로 먼저
-작성해 실패를 확인한 뒤 구현했다. 현재 Fable review 요청 상태다.
+Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
+먼저 작성해 실패를 확인한 뒤 구현했다. 8차 심사 C1/C2를 반영해 현재
+재심사 요청 상태다.
 
 다만 Storage Writer 구현은 Gate 통과 전까지 제품 동작으로 확정되지 않는다.
 백업/Export, 인증/기기/세션 코드는 여전히 Gate 대상이다.
@@ -99,6 +100,8 @@ Storage Writer Step 2는 Fable Gate Acceptance Spec A1~A5를 테스트로 먼저
 - Storage Writer internal module
 - Fable Gate Acceptance Spec A1~A5 pytest suite (`gate_spec`)
 - temp file + atomic rename write path
+- rename 전 temp media size/sha256 verification
+- app timezone canonical timestamp normalization
 - `messages.md` regeneration
 - orphan media recovery
 - SQLite timeline index rebuild from `DuriStorage/`

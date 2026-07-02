@@ -5,6 +5,62 @@
 
 ---
 
+# 8차 심사 — 2026-07-03, commit `aff3c1f` (Step 2: Storage Writer)
+
+- Scope: Gate 대상 ⑤ 첫 코드 심사 — `storage.py` + gate_spec 테스트 14건
+
+## Verdict: 조건부 통과 (Conditional Pass)
+
+TDD 절차 준수(red 상태 기록 후 구현), Spec A1~A5의 14개 테스트가 1:1로
+존재하며 전부 정직하게 작성됐다 (hook 기반 장애 주입, 실제 스레드 동시성
+검증). Fable 환경에서 전체 16건 통과 재확인. Auth/공개 엔드포인트가
+Step 2에 섞여 들어오지 않았음도 확인 (storage.py는 내부 모듈만 노출).
+단, 정독 중 결함 1건을 실증했고 RFC 불일치 1건을 확인했다.
+
+## Conditions (Step 2 Gate 통과 전 해소 필수)
+
+### C1. 타임존 혼합 시 Timeline 정렬 붕괴 (Major — 결함 실증됨)
+
+`_base_log`가 `created_at`을 받은 그대로 저장하고, `_sorted_logs`가 이
+문자열을 사전순 정렬한다. 서로 다른 offset 표기가 섞이면 정렬이 깨진다.
+
+**실증**: KST 19:28:00에 온 메시지와 1초 뒤(UTC 표기 10:28:01+00:00)에 온
+메시지를 저장하면 — 늦게 온 메시지가 Timeline에서 먼저 정렬되고,
+`messages.md`에는 "10:28"(UTC)로 표기된다. 향후 업로드 엔드포인트가
+서버 UTC 시각을 쓰는 순간 실사용에서 재현된다. Timeline 순서는 이 제품의
+핵심 불변식이다.
+
+**요구**: `created_at`/`ingested_at`을 저장 시점에 앱 타임존으로 정규화할
+것 (canonical 파일의 시각 표기 일관성은 Human Readable First에도 부합).
+Spec **A5-4** (v1.1 추가)의 테스트를 작성해 red 확인 후 수정하라.
+
+### C2. RFC 0001 §10 2단계(해시 검증) 미구현 (Medium)
+
+RFC의 사진 쓰기 절차는 "temp 쓰기 → **hash/size 검증** → rename"인데,
+구현은 검증 없이 rename하고 사후에 해시를 기록만 한다. 디스크가 조용히
+바이트를 깨뜨린 경우 손상된 해시가 그대로 MediaRef에 박제된다. rename
+전에 temp 파일을 재독해 원본 바이트의 sha256과 비교하고, 불일치 시
+StorageWriteError로 거부할 것. Spec **A2-4** (v1.1 추가) 테스트로 증명하라.
+
+## Non-blocking Notes
+
+- **N1 (배포 Gate 이월)**: 파티션 락이 `threading.Lock`이므로 단일 프로세스
+  안에서만 직렬화된다. 배포 시 uvicorn 워커 1개로 제한하거나 파일 락 도입
+  필요 — 배포/e2e Gate 확인 항목으로 이월.
+- 락 딕셔너리가 storage_root와 무관하게 period 키만 사용 — 현재는 과잉
+  잠금일 뿐 무해. 다중 스토리지 루트를 쓰게 되면 키에 root 포함할 것.
+- `main.py` 변경은 테스트 용이성 리팩터링(행위 동일), `pyproject`의
+  `gate_spec` marker 등록은 Spec C-2 규칙 이행 — 둘 다 적절.
+- Codex가 Fable 미커밋 파일(Spec v1, 7차 심사)을 변경 없이 대신 커밋함 —
+  내용 확인 완료, 문제없음.
+
+## 재심사 조건
+
+C1, C2 해소 (A5-4, A2-4 테스트 red→green 포함) + CI 녹색 후
+`codex-gate-review-request.md` 갱신.
+
+---
+
 # 7차 심사 — 2026-07-03, commit `82ad28a` (Scaffold 코드베이스 전체 점검)
 
 - Scope: CEO 요청에 의한 코드베이스 전수 점검 (Gate request 아님 — Codex는

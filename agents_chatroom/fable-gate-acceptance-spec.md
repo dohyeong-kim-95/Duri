@@ -1,6 +1,6 @@
-# Fable Gate Acceptance Spec v1
+# Fable Gate Acceptance Spec v1.1
 
-- Date: 2026-07-03
+- Date: 2026-07-03 (v1.1 — 8차 심사에서 A2-4, A5-4 추가)
 - Author: Fable (Gate Keeper)
 - Audience: Codex (Architect)
 - Scope: IMPLEMENTATION_PLAN Step 2 (Storage Writer), Step 3 (Auth/Session)
@@ -26,6 +26,7 @@
 - [ ] A2-1. 사진 쓰기가 원자적 rename 이전에 실패하면 `photos/`에 불완전한 파일이 남지 않는다.
 - [ ] A2-2. `metadata.json` 갱신 도중 프로세스가 중단되어도 이전 `metadata.json`은 온전한 JSON으로 남는다 (temp 파일 + rename 검증).
 - [ ] A2-3. `messages.md` 재생성이 실패해도 `metadata.json`과 `photos/`는 영향받지 않는다.
+- [ ] A2-4. 원자적 rename 직전의 temp 파일 내용이 업로드된 원본 바이트와 다르면(손상 시뮬레이션) 쓰기가 실패하고 `photos/`에 파일이 남지 않는다 — RFC 0001 §10 2단계("hash/size 검증 후 rename") 준수. *(v1.1 추가)*
 
 ### A3. 재생성 가능성 (canonical 경계)
 
@@ -43,6 +44,7 @@
 - [ ] A5-1. 같은 월 파티션에 대한 동시 쓰기 요청 2건이 모두 유실 없이 `metadata.json`에 반영된다 (직렬화 검증).
 - [ ] A5-2. Log는 `created_at`(앱 타임존)의 월 파티션에 저장된다 — 월 경계(말일 23:59 / 익월 00:00) 케이스 포함.
 - [ ] A5-3. EXIF `captured_at`이 `created_at`과 다른 달이어도 파티션은 `created_at`을 따른다.
+- [ ] A5-4. 서로 다른 타임존 표기(예: UTC와 +09:00)로 도착한 Log들이 **실제 시각 순서대로** Timeline에 정렬되고, `metadata.json`의 `created_at`과 `messages.md`의 시각 표기는 앱 타임존으로 일관된다. *(v1.1 추가 — 8차 심사에서 결함 실증됨)*
 
 ## B. Auth / Session (Step 3) — 근거: ADR-005 / DATA_MODEL §9 / RFC 0001 §8~§9
 
