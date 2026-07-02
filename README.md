@@ -71,6 +71,8 @@ Implementation Gate
 
 Accepted storage RFC: [docs/rfc/0001-storage-layout.md](docs/rfc/0001-storage-layout.md)
 
+Implementation plan: [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)
+
 설계 Gate는 닫혔다. 구현 착수는 가능하다.
 
 CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 push/PR에서
@@ -82,6 +84,8 @@ CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 p
 
 구현 Gate 이월 확인 항목:
 
+- 앱 스택 선택: Codex 추천안은 TypeScript / Next.js / npm / SQLite cache +
+  filesystem `DuriStorage/`
 - N1: orphan media 복구 규칙
 - N2: 월 파티션 단위 쓰기 직렬화
 - N3: 백업 스펙(주기, 복원 테스트, 보관 위치, 암호화 키 관리)
@@ -115,6 +119,7 @@ Timeline 보존 경험이 검증된 이후의 Future Work다.
 - [CHANGELOG.md](CHANGELOG.md) — PRD/주요 결정 변경 이력
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md) — Log / Timeline / Search / View 데이터 모델 (v0.4)
 - [docs/WORKFLOW.md](docs/WORKFLOW.md) — 사용자 행동부터 Search까지 이어지는 전체 워크플로우
+- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) — 구현 착수 순서와 Gate 경계
 - [docs/EVENT_ENGINE.md](docs/EVENT_ENGINE.md) — (Future Work) Log가 Event로 자동 연결되는 규칙과 파이프라인 스케치
 - [docs/adr](docs/adr) — Architecture Decision Records
 - [docs/rfc](docs/rfc) — Request for Comments

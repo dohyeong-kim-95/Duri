@@ -6,6 +6,24 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Implementation Plan v0.1 — 2026-07-03
+
+구현 착수 순서와 Gate 경계를 문서화.
+
+### Added
+
+- `docs/IMPLEMENTATION_PLAN.md` 추가
+- 원본 쓰기/백업/Auth 구현 전 Fable Gate Acceptance Spec이 필요한 영역 명시
+- 앱 스택 추천안 기록: TypeScript / Next.js / npm / SQLite cache + filesystem
+  `DuriStorage/`
+
+### Changed
+
+- README Next Gate와 Documents에 Implementation Plan 링크 추가
+- README 구현 Gate 이월 확인 항목에 앱 스택 선택 추가
+
+---
+
 ## CI Baseline — 2026-07-03
 
 구현 단계 Gate 구조와 "CI 구성 1순위" 원칙 반영.
