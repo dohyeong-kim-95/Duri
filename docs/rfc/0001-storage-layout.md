@@ -24,6 +24,7 @@ ADR-007은 "저장 구조 자체가 Export"라고 결정했다. 따라서 구현
 - Message/Photo 원본의 canonical 위치
 - 파일명 규칙과 월/일 분할 기준
 - 서버 파일 저장 보장 수준
+- 서버 OS 접근 통제와 `DuriStorage/` 평문 저장 경계
 - `metadata.json` 쓰기 무결성 전략
 
 이 RFC는 원본 데이터를 오래 보존하면서도, 앱이 없어도 파일 탐색기와 표준 도구로
@@ -222,7 +223,54 @@ Rule:
 - `messages.md` may render participant names from `metadata.json.participants`.
 - It is enough that the export action is allowed only for one of the two registered users.
 
-### 9. Durable Storage and Write Integrity Strategy
+### 9. Server Access Boundary
+
+`DuriStorage/` is stored in plaintext for MVP.
+
+Reason:
+
+- Human Readable First requires files to remain directly readable without app-specific
+  decryption machinery.
+- Storage-as-Export requires long-term recovery even if Duri itself is unavailable.
+- MVP runs on a home Mini PC where physical access and OS account access can be tightly
+  controlled.
+
+Server OS access decision:
+
+- The only administrator OS account is the CEO's account.
+- The Duri app runs as a separate `duri` service user.
+- `DuriStorage/` filesystem permissions must allow access only to the owner/service user
+  and required administrator account.
+- The partner is an app user, not a server OS user.
+- SSH access must be key-based only.
+- Password login must be disabled.
+- Unnecessary OS accounts must not be created.
+
+Encryption decision:
+
+- MVP does not encrypt the live `DuriStorage/` volume or directory.
+- Protection relies on home Mini PC physical control plus OS account permissions.
+- Backups that leave the Mini PC must be encrypted.
+
+Tradeoff:
+
+- If the Mini PC or live disk is physically stolen, plaintext `DuriStorage/` may be
+  exposed.
+- This risk is accepted for MVP in exchange for operational simplicity, Human Readable
+  recovery, and fewer long-term key-loss failure modes.
+
+Revisit triggers:
+
+- `DuriStorage/` or backups are routinely carried outside the home.
+- The deployment moves to cloud hosting or third-party managed infrastructure.
+- Threat model changes so physical theft risk is no longer acceptable.
+
+Backup encryption key management is not finalized in this RFC. Before implementing
+encrypted external backups, a backup spec must decide how keys are stored, whether an
+offline copy exists, and whether both users can access the key. Losing the key must not
+become a realistic path to losing the only recoverable backup.
+
+### 10. Durable Storage and Write Integrity Strategy
 
 `DuriStorage/` is the original data store. It must survive server restart, redeploy, and
 container recreation.

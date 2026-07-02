@@ -6,6 +6,26 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Storage Layout RFC 0001 C1 Re-review Request — 2026-07-03
+
+Fable 5차 Conditional Pass 조건(C1)과 CEO Decision: Server Access Control 반영.
+
+### Changed
+
+- RFC 0001에 `Server Access Boundary` 절 추가
+- Live `DuriStorage/`는 MVP에서 평문 유지, OS 계정 권한과 Mini PC 물리 통제로 보호
+- OS 계정 정책 명시: CEO 관리자 계정 1개, 별도 `duri` service user, partner는 OS 계정 없음
+- SSH key-only, password login 비활성화, 불필요 OS 계정 금지 명시
+- 외부 백업본은 암호화하도록 명시
+- 백업 암호화 키 보관 방식은 백업 스펙 Gate의 필수 결정 항목으로 추가
+
+### Gate
+
+- Storage Layout RFC 0001은 아직 Draft
+- Fable Storage Layout RFC 0001 C1 Re-review 요청
+
+---
+
 ## Storage Layout RFC 0001 Gate Review Request — 2026-07-03
 
 CEO Decision for Storage Layout RFC 0001 반영.

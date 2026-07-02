@@ -76,8 +76,10 @@ Current draft: [docs/rfc/0001-storage-layout.md](docs/rfc/0001-storage-layout.md
 
 - 월 단위 `metadata.json` 유지
 - `DuriStorage/`는 ephemeral filesystem이 아닌 영구 디스크/볼륨에 저장
+- Live `DuriStorage/`는 MVP에서 평문 유지, OS 계정/물리 접근으로 보호
 - 원본 사진/메시지/metadata는 DB보다 우선하는 보존 대상
 - `metadata.json.tmp` 작성 후 검증/rename, fsync best effort, 별도 백업
+- 외부 백업본은 암호화, 백업 암호화 키 보관 방식은 백업 스펙 Gate에서 별도 확정
 - Storage Layout RFC 0001 Accepted 여부
 
 ---

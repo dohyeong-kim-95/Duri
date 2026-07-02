@@ -3,83 +3,63 @@
 - Date: 2026-07-03
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: Storage Layout RFC 0001 Final Review
-- Status: Review Requested
+- Scope: Storage Layout RFC 0001 Final Review — Server Access Boundary Re-review
+- Status: Re-review Requested
 
-## Why This Needs Gate Review
+## Fable 5차 Conditional Pass Response
 
-`00-gatekeeping-principles.md` requires Fable review before finalizing storage/export
-formats and before implementation touches original-data write paths, backup/export,
-auth, or device/session code.
+Fable reviewed commit `cd2b1fe` and gave Conditional Pass with one blocking condition.
+Codex addressed it in this revision.
 
-Storage Layout RFC 0001 defines where canonical Message/Photo Logs, original photos,
-monthly metadata, generated message views, and rebuildable indexes live under
-`DuriStorage/`.
+### C1. 서버 접근 통제 스탠스를 RFC에 기록할 것
 
-## CEO Decisions Applied
+Applied:
 
-### 1. `metadata.json` Partition
+- Added `docs/rfc/0001-storage-layout.md §9 Server Access Boundary`.
+- Recorded Server OS access decision:
+  - CEO is the only administrator OS account.
+  - Duri app runs as separate `duri` service user.
+  - `DuriStorage/` filesystem permissions allow only owner/service user and required
+    administrator account.
+  - Partner is an app user, not a server OS user.
+  - SSH is key-based only.
+  - Password login is disabled.
+  - Unnecessary OS accounts are not created.
+- Recorded encryption decision:
+  - Live `DuriStorage/` remains plaintext for MVP.
+  - Protection relies on home Mini PC physical control plus OS permissions.
+  - Backups that leave the Mini PC must be encrypted.
+- Recorded tradeoff:
+  - Physical theft of the Mini PC/live disk may expose plaintext data.
+  - MVP accepts this risk for operational simplicity, Human Readable recovery, and
+    fewer long-term key-loss failure modes.
+- Recorded revisit triggers:
+  - External carrying of `DuriStorage/` or backups.
+  - Cloud or third-party managed infrastructure migration.
+  - Changed physical theft threat model.
+- Added backup key-management requirement:
+  - Before encrypted external backup implementation, backup spec must decide key storage,
+    offline copy, and whether both users can access the key.
 
-Decision:
-
-- MVP keeps month-level `metadata.json`.
-- Example: `DuriStorage/timeline/2026/2026-07/metadata.json`.
-- Day-level partitions are Future Work if file size or performance becomes a problem.
-
-Reason:
-
-- MVP is a two-person system.
-- MVP supports only Message and Photo.
-- Month-level files are simpler for initial implementation and file browsing.
-
-### 2. Server Filesystem Durability
-
-Decision:
-
-- `DuriStorage/` must be stored on persistent server-local storage or a mounted
-  persistent volume.
-- `DuriStorage/` must not be stored on an ephemeral filesystem.
-- Server restart, redeploy, or container recreation must not delete original data.
-
-Required:
-
-- Original photos, Message text, and `metadata.json` are higher-priority preservation
-  targets than the DB.
-- DB/search indexes are performance caches and are not the original store.
-- `metadata.json` is written to a temp file first, verified, then renamed.
-- Use fsync or platform-equivalent durability calls where available.
-- Keep a separate backup in addition to the primary persistent volume.
-
-## Changed Artifacts
+## Changed Artifacts Since `cd2b1fe`
 
 - `docs/rfc/0001-storage-layout.md`
-  - Resolved both previous Open Questions.
-  - Added month-level partition as MVP decision.
-  - Added persistent storage requirements.
-  - Added day-level partitioning as rejected for MVP / Future Work.
-  - Expanded write integrity strategy with persistent volume, fsync best effort, and
-    backup requirements.
 - `README.md`
-  - Updated current phase to `Storage Layout RFC 0001 Gate Review Requested`.
-  - Marked monthly `metadata.json` and persistent disk/volume decisions complete.
-  - Shows remaining steps: Fable final review and CEO final approval.
 - `CHANGELOG.md`
-  - Records Storage Layout RFC 0001 Gate Review Request.
-- `agents_chatroom/2026-07-03-storage-layout-rfc-0001-gate-plan.md`
-  - Captures the review plan and acceptance boundary for this Gate.
+- `agents_chatroom/codex-gate-review-request.md`
+- `agents_chatroom/fable-gate-review.md`
 
 ## Review Focus
 
 Please verify:
 
-1. RFC 0001 is consistent with ADR-001 Human Readable First.
-2. RFC 0001 is consistent with ADR-007 Storage is Export.
-3. RFC 0001 does not reintroduce VaultFolder Curation into MVP.
-4. Month-level `metadata.json` is sufficiently justified for MVP.
-5. Persistent disk/volume requirements are strong enough to protect original data.
-6. Auth operating data remains excluded while participant display identity remains
-   included for memory readability.
-7. RFC 0001 can proceed to CEO final approval for `Accepted` status.
+1. RFC 0001 now records the server access boundary required by Fable C1.
+2. The plaintext live storage decision is consistent with ADR-001 Human Readable First
+   and ADR-007 Storage is Export.
+3. OS account restrictions are sufficient for the two-person MVP.
+4. External backup encryption and key-management risk are recorded without prematurely
+   finalizing the backup spec.
+5. RFC 0001 can proceed to CEO final approval for `Accepted` status.
 
 ## Non-Final Boundary
 
@@ -92,10 +72,9 @@ backup/export, auth, or device/session code.
 
 Codex ran:
 
-- `rg` checks for unresolved Open Questions and stale partition/durability wording.
-  - RFC 0001 no longer has an `Open Questions` section.
-  - Remaining Open Questions mention is this request's "resolved previous Open Questions"
-    summary.
+- `rg` checks for Server Access Boundary, plaintext storage, OS account policy, external
+  backup encryption, and backup key-management wording.
+  - RFC 0001 contains the new `Server Access Boundary` section.
   - RFC 0001 still has `Status: Draft`, as intended.
 - `git diff --check`.
 - Manual README and RFC status review.

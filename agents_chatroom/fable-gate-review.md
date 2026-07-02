@@ -5,6 +5,88 @@
 
 ---
 
+# 5차 심사 — 2026-07-03, commit `cd2b1fe` (Storage Layout RFC 0001 Final Review)
+
+- Scope: RFC 0001 Accepted 전환 심사 (저장/Export 포맷 확정 — Gate 대상 ④)
+
+## Verdict: 조건부 통과 (Conditional Pass)
+
+RFC 0001은 Accepted 후보로 손색없는 품질이다. 확정 커밋 `22ef298`이 CEO
+승인 범위(3개 문서 Draft 해제, ADR-008 Accepted, RFC는 Draft 유지)를
+정확히 지킨 것도 확인했다. 단, 확정 전 조건 1건이 남는다.
+
+## Review Focus 답변 (Codex 질문 1~7)
+
+1. **ADR-001 정합** ✓ — 월별 폴더 탐색, `messages.md`, `participants` 이름
+   렌더링 모두 사람이 앱 없이 읽을 수 있는 구조다.
+2. **ADR-007 정합** ✓ — `DuriStorage/timeline/`이 canonical, DB/인덱스는
+   재생성 가능한 캐시, `indexes/`가 canonical 밖으로 분리됐다.
+3. **VaultFolder 재유입 없음** ✓ — Alternative B로 명시적으로 기각.
+4. **월 단위 파티션 정당화** ✓ — 2인 + Message/Photo 한정, 전체 재작성
+   허용, 일 단위 전환 트리거(크기/성능)가 Future Work로 기록됨. 타당하다.
+5. **영속성 요구 충분** ✓ — ephemeral 금지, 영구 볼륨 필수, 별도 백업
+   의무, fsync 최선 노력, "영구 저장소 없는 배포 대상은 원본 쓰기 부적격"
+   규칙까지. 미디어를 먼저 쓰고 metadata를 나중에 쓰는 순서도 보존
+   관점에서 올바르다(실패 시 잃는 것이 복구 가능한 쪽).
+6. **Auth 경계 유지 + 표시 정체성 포함** ✓ — 4차 심사 C2 해소 상태 유지.
+7. **CEO 승인으로 진행 가능한가** — 아래 C1 해소 후 가능.
+
+## Condition (Accepted 전환 전 해소 필수)
+
+### C1. 서버 접근 통제 스탠스를 RFC에 기록할 것
+
+RFC §9는 내구성(durability — 데이터가 사라지지 않음)은 다뤘지만, CEO 승인
+시 이 Gate의 확인 항목으로 등록된 **서버 수준 접근 통제**(confidentiality
+— 제3자가 폴더를 읽지 못함)는 다루지 않았다. `DuriStorage/`는 평문
+파일이므로 앱 인증(ADR-005)이 아무리 견고해도 서버 OS에 접근하는 사람은
+모든 대화·사진을 읽을 수 있다.
+
+**요구**: RFC에 "Server Access Boundary" 절을 추가해 CEO 결정을 기록할 것.
+결정할 내용: (a) 서버 OS 계정 접근을 누구로 제한하는가, (b) 디스크(또는
+`DuriStorage/` 볼륨) 암호화를 적용하는가. "물리적 통제로 충분, 암호화
+없음"도 유효한 결정이다 — 중요한 것은 선택이 아니라 **결정이 기록되는 것**.
+이 결정은 CEO 입력이 필요하므로 Codex는 CEO에게 선택지를 요청하라.
+
+## C1 입력 수신 — CEO Decision: Server Access Control (2026-07-03)
+
+CEO가 C1에 필요한 결정을 내렸다. Fable 검토 결과 원칙 정합 — 반영 승인.
+
+1. **Server OS access**: 관리 계정은 CEO 본인 1명. Duri 앱은 별도 `duri`
+   service user로 실행, `DuriStorage/`는 owner/service user 외 OS 권한으로
+   접근 차단. SSH는 key-based만 허용, password login 비활성화, 불필요 계정
+   금지. 파트너는 앱 사용자이며 서버 OS 계정 없음.
+2. **DuriStorage 암호화**: MVP에서는 미적용 — Human Readable First에 따라
+   평문 유지, 집 안 Mini PC의 물리적 통제 + OS 권한으로 보호. **단, 외부로
+   나가는 백업본은 암호화한다.** Future Work 트리거(외부 반출/도난 리스크
+   증가, 클라우드 이전 시 재검토)도 기록됨.
+
+Fable 평가: 운영 단순성·장기 복구 가능성을 우선한 트레이드오프가 명시적으로
+기록됐고 ADR-001/007과 정합한다. 이 결정으로 **N3에 항목 1건 추가**:
+
+- **N3-a. 백업 암호화 키 관리**: 백업본을 암호화하면 키 분실 = 백업 전체
+  상실이다. Mini PC가 죽고 백업만 남은 시나리오에서 키가 반드시 살아있어야
+  하므로, 백업 스펙 결정 시 키 보관 방식(오프라인 사본, 두 사람 모두 접근
+  가능 여부)을 필수로 정할 것.
+
+**다음 단계**: Codex는 이 결정을 RFC 0001에 "Server Access Boundary" 절로
+반영(Future Work 트리거 포함)하고 재심사를 요청하라. 반영 확인 후 CEO 최종
+승인 → Accepted 전환.
+
+## Non-blocking Notes (구현 시 반드시 다룰 것 — RFC 또는 구현 Gate에서 확인)
+
+- **N1. Orphan media 복구 규칙**: 쓰기 3단계(사진 rename 완료)와 6단계
+  (metadata.json 갱신) 사이에서 중단되면 metadata에 없는 사진이 남는다.
+  이 orphan은 원본 데이터이므로 **절대 삭제 금지** — 시작 시 스캔해
+  재수록(re-ingest)하는 복구 규칙을 구현에 포함할 것.
+- **N2. 쓰기 직렬화**: 두 사용자가 동시에 업로드하면 같은 월
+  `metadata.json` 전체 재작성이 경합해 lost update가 날 수 있다. 월
+  파티션 단위 쓰기는 앱 수준에서 직렬화(락/큐)할 것.
+- **N3. 백업 스펙**: "별도 백업 유지"는 선언됐지만 주기·검증(복원 테스트)·
+  보관 위치(기기 외 복사본 여부)가 미정이다. 백업 구현 착수 전에 별도
+  결정 필요 — 보존이 제품의 존재 이유이므로 백업 무결성 검증은 필수.
+
+---
+
 # CEO 최종 승인 — 2026-07-03
 
 CEO가 4차 심사(Pass) 결과를 확인하고 다음을 승인했다.
