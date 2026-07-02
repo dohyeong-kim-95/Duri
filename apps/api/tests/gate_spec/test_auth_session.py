@@ -12,10 +12,17 @@ from duri_api.auth import AuthError, AuthService
 from duri_api.main import create_app, handle_timeline_websocket
 
 
-def make_auth(tmp_path: Path, *, access_ttl_seconds: int = 300) -> AuthService:
+def make_auth(
+    tmp_path: Path,
+    *,
+    jwt_secret: str = "test-secret",
+    hash_secret: str = "test-hash-secret",
+    access_ttl_seconds: int = 300,
+) -> AuthService:
     return AuthService(
         db_path=tmp_path / "auth.sqlite3",
-        jwt_secret="test-secret",
+        jwt_secret=jwt_secret,
+        hash_secret=hash_secret,
         access_ttl_seconds=access_ttl_seconds,
     )
 
@@ -191,6 +198,38 @@ def test_b2_3_auth_operating_data_is_not_written_inside_duri_storage(tmp_path: P
     auth.refresh_access_token(result["refresh_token"])
 
     assert list(storage_root.rglob("*")) == []
+
+
+@pytest.mark.gate_spec(
+    "B2-4. 토큰 서명 키를 교체해도 저장된 해시(초대 코드·refresh token·fingerprint)는 유효하게 유지된다 — 같은 DB에서 서명 키만 다른 서비스 인스턴스로 기존 refresh token 갱신이 성공하고, 구 access token은 거부된다 (서명 키와 해시 키의 도메인 분리)."
+)
+def test_b2_4_signing_key_rotation_does_not_invalidate_stored_hashes(
+    tmp_path: Path,
+) -> None:
+    """B2-4. 토큰 서명 키를 교체해도 저장된 해시(초대 코드·refresh token·fingerprint)는 유효하게 유지된다 — 같은 DB에서 서명 키만 다른 서비스 인스턴스로 기존 refresh token 갱신이 성공하고, 구 access token은 거부된다 (서명 키와 해시 키의 도메인 분리)."""
+    auth = make_auth(
+        tmp_path,
+        jwt_secret="signing-key-v1",
+        hash_secret="stable-hash-key",
+    )
+    result = register_user(auth, code="rotation-safe", slot=1)
+
+    rotated = make_auth(
+        tmp_path,
+        jwt_secret="signing-key-v2",
+        hash_secret="stable-hash-key",
+    )
+
+    with pytest.raises(AuthError):
+        rotated.validate_access_token(result["access_token"])
+
+    refreshed = rotated.refresh_access_token(result["refresh_token"])
+    response = asyncio.run(
+        get_json(rotated, "/timeline", access_token=refreshed["access_token"])
+    )
+
+    assert refreshed["access_token"] != result["access_token"]
+    assert response.status_code == 200
 
 
 @pytest.mark.gate_spec(

@@ -41,14 +41,20 @@ class AuthService:
         *,
         db_path: Path,
         jwt_secret: str,
+        hash_secret: str,
         access_ttl_seconds: int = 60 * 15,
         refresh_ttl_seconds: int = DEFAULT_REFRESH_TTL_SECONDS,
     ) -> None:
         if not jwt_secret:
             raise ValueError("jwt_secret is required")
+        if not hash_secret:
+            raise ValueError("hash_secret is required")
+        if hmac.compare_digest(jwt_secret, hash_secret):
+            raise ValueError("hash_secret must be distinct from jwt_secret")
 
         self.db_path = db_path
         self._jwt_secret = jwt_secret.encode("utf-8")
+        self._hash_secret_key = hash_secret.encode("utf-8")
         self.access_ttl_seconds = access_ttl_seconds
         self.refresh_ttl_seconds = refresh_ttl_seconds
         self._initialize_schema()
@@ -73,7 +79,7 @@ class AuthService:
                 VALUES (?, ?, ?, ?, NULL, NULL)
                 """,
                 (
-                    self._hash_secret(code),
+                    self._hash_secret("invite-code", code),
                     intended_slot,
                     created_at,
                     expires_at,
@@ -97,7 +103,7 @@ class AuthService:
         device_fingerprint: str,
     ) -> JsonObject:
         now = _now()
-        code_hash = self._hash_secret(code)
+        code_hash = self._hash_secret("invite-code", code)
 
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -239,7 +245,7 @@ class AuthService:
 
     def refresh_access_token(self, refresh_token: str) -> JsonObject:
         now = _now()
-        refresh_token_hash = self._hash_secret(refresh_token)
+        refresh_token_hash = self._hash_secret("refresh-token", refresh_token)
 
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -443,7 +449,13 @@ class AuthService:
             )
             VALUES (?, ?, ?, ?, ?, NULL)
             """,
-            (user_id, device_label, self._hash_secret(device_fingerprint), now, now),
+            (
+                user_id,
+                device_label,
+                self._hash_secret("device-fingerprint", device_fingerprint),
+                now,
+                now,
+            ),
         )
         return {
             "id": _last_insert_id(cursor),
@@ -475,7 +487,7 @@ class AuthService:
             (
                 user_id,
                 device_id,
-                self._hash_secret(refresh_token),
+                self._hash_secret("refresh-token", refresh_token),
                 now,
                 expires_at,
                 now,
@@ -517,8 +529,9 @@ class AuthService:
             raise AuthError("invalid token payload")
         return cast(JsonObject, payload)
 
-    def _hash_secret(self, raw: str) -> str:
-        return hmac.new(self._jwt_secret, raw.encode("utf-8"), hashlib.sha256).hexdigest()
+    def _hash_secret(self, purpose: str, raw: str) -> str:
+        payload = f"duri-auth:{purpose}:v1\0{raw}".encode()
+        return hmac.new(self._hash_secret_key, payload, hashlib.sha256).hexdigest()
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path, isolation_level=None)

@@ -128,22 +128,26 @@ Notes:
 
 ### Step 3 — Auth and Session TDD
 
-Status: implemented from Fable Gate Acceptance Spec v1.1; Gate review requested.
+Status: implemented from Fable Gate Acceptance Spec v1.2; C1 re-review requested.
 
 Implemented test subjects:
 
 - Only two users can register.
 - Invite codes are one-time use.
 - Invite code and refresh token originals are never stored.
+- Signing keys and stored-hash keys are separated.
 - Device sessions can be revoked independently.
 - Data access requires authentication.
 
 Notes:
 
-- Spec v1.1 tests live in `apps/api/tests/gate_spec/test_auth_session.py`.
+- Spec v1.2 tests live in `apps/api/tests/gate_spec/test_auth_session.py`.
 - Tests are marked with `pytest.mark.gate_spec`.
 - Initial red test was confirmed before implementation:
   `ModuleNotFoundError: No module named 'duri_api.auth'`.
+- C1 red test was confirmed after Spec v1.2:
+  signing-key rotation made the existing refresh token unfindable before key
+  domain separation.
 - Auth operational state is stored in SQLite outside `DuriStorage/`.
 - `DuriStorage/` remains reserved for original Message/Photo canonical storage.
 - This step exposes only protected placeholder data endpoints; message/photo upload

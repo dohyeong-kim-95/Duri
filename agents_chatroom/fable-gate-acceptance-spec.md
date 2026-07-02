@@ -1,6 +1,6 @@
-# Fable Gate Acceptance Spec v1.1
+# Fable Gate Acceptance Spec v1.2
 
-- Date: 2026-07-03 (v1.1 — 8차 심사에서 A2-4, A5-4 추가)
+- Date: 2026-07-03 (v1.1 — A2-4, A5-4 추가 / v1.2 — B2-4 추가)
 - Author: Fable (Gate Keeper)
 - Audience: Codex (Architect)
 - Scope: IMPLEMENTATION_PLAN Step 2 (Storage Writer), Step 3 (Auth/Session)
@@ -60,6 +60,7 @@
 - [ ] B2-1. 초대 코드 원문은 DB·로그·`DuriStorage/` 어디에도 저장되지 않는다 (해시만 존재).
 - [ ] B2-2. Refresh token 원문도 동일하다.
 - [ ] B2-3. `DuriStorage/` 트리 안에 auth 운영 데이터(해시 포함)가 존재하지 않는다.
+- [ ] B2-4. 토큰 서명 키를 교체해도 저장된 해시(초대 코드·refresh token·fingerprint)는 유효하게 유지된다 — 같은 DB에서 서명 키만 다른 서비스 인스턴스로 기존 refresh token 갱신이 성공하고, 구 access token은 거부된다 (서명 키와 해시 키의 도메인 분리). *(v1.2 추가 — 10차 심사)*
 
 ### B3. 접근 통제
 

@@ -84,8 +84,9 @@ CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 p
 Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
 먼저 작성해 실패를 확인한 뒤 구현했고, 9차 심사에서 Gate 통과가 확인됐다.
 
-Auth/Session Step 3은 Fable Gate Acceptance Spec v1.1 B1~B4를 테스트로
-먼저 작성해 실패를 확인한 뒤 구현했다. 현재 Fable Gate review 요청 상태다.
+Auth/Session Step 3은 Fable Gate Acceptance Spec v1.2 B1~B4를 테스트로
+먼저 작성해 실패를 확인한 뒤 구현했다. 10차 심사 C1(서명 키/해시 키
+도메인 분리)을 반영해 현재 Fable re-review 요청 상태다.
 
 다만 Auth/Session 구현은 Gate 통과 전까지 제품 동작으로 확정되지 않는다.
 백업/Export 코드는 여전히 Gate 대상이다.
@@ -115,6 +116,7 @@ Gate 통과:
 - two-person invite-code registration limit
 - one-time invite consumption
 - no plaintext invite code / refresh token storage
+- separated signing key and hash key domains
 - auth operating data kept outside `DuriStorage/`
 - protected Timeline, photo, search, and Timeline WebSocket access
 - access token expiry rejection

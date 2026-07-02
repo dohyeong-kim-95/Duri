@@ -6,6 +6,31 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Auth/Session C1 Re-review Request — 2026-07-03
+
+Fable 10차 심사 Conditional Pass 조건 반영.
+
+### Added
+
+- Gate Acceptance Spec v1.2 반영
+- B2-4 테스트: 서명 키만 교체해도 기존 refresh token 갱신은 성공하고, 구
+  access token은 거부되는지 검증
+
+### Changed
+
+- JWT 서명 키(`jwt_secret`)와 저장 해시 키(`hash_secret`)를 분리
+- invite code, refresh token, device fingerprint 해시에 용도별 HMAC domain 적용
+- Gate review 요청 문서를 C1 재심사 요청으로 갱신
+
+### Verification
+
+- B2-4 red 확인: 서명 키 교체 후 기존 refresh token 조회 실패
+- B2-4 green 전환
+- Backend gate spec: `29 passed`
+- Backend tests: `31 passed`
+
+---
+
 ## Auth/Session Gate Review Request — 2026-07-03
 
 Fable Gate Acceptance Spec v1.1의 Step 3 Auth/Session(B1~B4) 반영.
