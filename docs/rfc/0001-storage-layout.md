@@ -10,8 +10,10 @@
 Duri의 Export v1 저장 구조를 `DuriStorage/` 아래에 두고, Timeline 월별 원본
 묶음과 재생성 가능한 Index/View를 분리한다.
 
-이 RFC는 구현 전 논의 초안이다. Accepted 전까지 파일명 규칙, 디렉토리 규칙,
-쓰기 무결성 전략은 확정되지 않는다.
+MVP는 월 단위 `metadata.json`을 유지하고, `DuriStorage/`를 ephemeral filesystem이
+아닌 영구 디스크/볼륨에 저장한다.
+
+이 RFC는 Fable Gate Review와 CEO final approval 전까지 Draft다.
 
 ## Motivation
 
@@ -21,6 +23,7 @@ ADR-007은 "저장 구조 자체가 Export"라고 결정했다. 따라서 구현
 - Export 루트 이름 확정
 - Message/Photo 원본의 canonical 위치
 - 파일명 규칙과 월/일 분할 기준
+- 서버 파일 저장 보장 수준
 - `metadata.json` 쓰기 무결성 전략
 
 이 RFC는 원본 데이터를 오래 보존하면서도, 앱이 없어도 파일 탐색기와 표준 도구로
@@ -64,7 +67,8 @@ Directory roles:
 
 ### 3. Timeline Partition Rule
 
-Timeline partitions use `Log.created_at` in local application timezone.
+MVP Timeline partitions are month-level and use `Log.created_at` in local application
+timezone.
 
 Example:
 
@@ -77,8 +81,13 @@ Reason:
 - `Log.created_at` is the Timeline ordering key.
 - Photo EXIF `captured_at` can differ from upload/Log time and can be missing.
 - Partitioning by one canonical Log field avoids a photo moving between folders if EXIF handling changes.
+- MVP is a two-person system with only Message and Photo Logs, so one monthly
+  `metadata.json` is simple enough.
 
 Photo metadata still stores `captured_at` and raw EXIF GPS when available.
+
+If monthly files become too large or performance becomes a problem, day-level
+partitions are Future Work.
 
 ### 4. Canonical Monthly Metadata
 
@@ -126,6 +135,8 @@ Rules:
 - `messages.md` is generated from `metadata.json`.
 - Original photos live under `photos/`, and `metadata.json` stores their `MediaRef`.
 - DB/search indexes must be rebuildable from `metadata.json` and original media files.
+- The monthly `metadata.json` is rewritten as a whole for MVP. If this becomes too large,
+  a future RFC may split it by day or per-log files.
 
 ### 5. Human-Readable Message View
 
@@ -211,7 +222,20 @@ Rule:
 - `messages.md` may render participant names from `metadata.json.participants`.
 - It is enough that the export action is allowed only for one of the two registered users.
 
-### 9. Write Integrity Strategy
+### 9. Durable Storage and Write Integrity Strategy
+
+`DuriStorage/` is the original data store. It must survive server restart, redeploy, and
+container recreation.
+
+Deployment requirements:
+
+- `DuriStorage/` must not be stored on an ephemeral filesystem.
+- `DuriStorage/` must live on server-local persistent storage or a mounted persistent
+  volume.
+- Original photos, Message text, and `metadata.json` are higher-priority preservation
+  targets than the DB.
+- DB/search indexes are performance caches and must be rebuildable from `DuriStorage/`.
+- A separate backup must be maintained in addition to the primary persistent volume.
 
 MVP write strategy:
 
@@ -227,9 +251,12 @@ If step 7 fails, the canonical archive is still valid because `messages.md` is d
 
 Implementation notes:
 
+- Use fsync or platform-equivalent durability calls where available before atomic rename.
 - The exact fsync behavior is platform-specific and must be handled in implementation.
 - For MVP two-person usage, whole-file rewrite is acceptable.
 - If `metadata.json` becomes too large, a future RFC can split by day or use per-log files.
+- A deployment target that cannot provide persistent storage is not eligible for
+  original-data writes.
 
 ## Alternatives Considered
 
@@ -274,10 +301,27 @@ Cons:
 This may become attractive later, but the MVP proposal keeps a monthly `metadata.json`
 because DATA_MODEL v0.4 already names it as canonical.
 
-## Open Questions
+### D. Start With Day-Level Partitions
 
-1. Is month-level `metadata.json` sufficient for MVP, or should we start with per-day partitions?
-2. What exact filesystem durability guarantees are required on the target deployment server?
+Pros:
+
+- Keeps each `metadata.json` smaller.
+- Reduces write amplification for busy months.
+
+Cons:
+
+- Adds more folders and files to browse.
+- Increases implementation complexity before there is evidence of scale pressure.
+- MVP only supports two people and Message/Photo, so month-level files are simpler.
+
+Rejected for MVP by CEO Decision: keep monthly `metadata.json`; day-level partitioning is
+Future Work if size or performance problems appear.
+
+## Resolved Questions
+
+1. MVP uses month-level `metadata.json`.
+2. `DuriStorage/` must be stored on persistent server-local storage or a mounted
+   persistent volume, not ephemeral filesystem.
 
 ## Gate Notes
 

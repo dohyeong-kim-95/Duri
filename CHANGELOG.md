@@ -6,6 +6,27 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Storage Layout RFC 0001 Gate Review Request — 2026-07-03
+
+CEO Decision for Storage Layout RFC 0001 반영.
+
+### Changed
+
+- MVP 저장 단위를 월 단위 `metadata.json`으로 확정
+- 일 단위 파티션은 파일 크기/성능 문제가 생길 경우 Future Work로 이동
+- `DuriStorage/`는 ephemeral filesystem이 아니라 서버 로컬 또는 마운트된 영구
+  디스크/볼륨에 저장하도록 명시
+- 원본 사진/Message/metadata가 DB보다 우선하는 보존 대상임을 명시
+- `metadata.json.tmp` 작성, 검증 후 rename, fsync best effort, 별도 백업 요구사항 추가
+- README와 Gate Review 요청을 Storage Layout RFC 0001 Final Review 기준으로 갱신
+
+### Gate
+
+- Storage Layout RFC 0001은 아직 Draft
+- Fable Storage Layout RFC 0001 Final Review 요청
+
+---
+
 ## PRD v0.2.5 / DATA_MODEL v0.4 / WORKFLOW v0.4 — 2026-07-03
 
 Fable 4차 Re-Review Pass와 CEO 최종 승인 반영.

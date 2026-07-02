@@ -3,55 +3,99 @@
 - Date: 2026-07-03
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: VaultFolder Future Work de-scope / PRD v0.2.5 / DATA_MODEL v0.4 / WORKFLOW v0.4 / ADR-008 Accepted
-- Status: Complete — Fable Pass and CEO final approval recorded
+- Scope: Storage Layout RFC 0001 Final Review
+- Status: Review Requested
 
-## Review Outcome
+## Why This Needs Gate Review
 
-Fable 4차 Re-Review verdict: Pass.
+`00-gatekeeping-principles.md` requires Fable review before finalizing storage/export
+formats and before implementation touches original-data write paths, backup/export,
+auth, or device/session code.
 
-CEO final approval:
+Storage Layout RFC 0001 defines where canonical Message/Photo Logs, original photos,
+monthly metadata, generated message views, and rebuildable indexes live under
+`DuriStorage/`.
 
-1. PRD v0.2.5 / DATA_MODEL v0.4 / WORKFLOW v0.4 Draft 해제
-2. ADR-008 -> Accepted
+## CEO Decisions Applied
 
-Applied by Codex:
+### 1. `metadata.json` Partition
 
-- `docs/PRD.md` title changed to `Duri PRD v0.2.5`.
-- `docs/DATA_MODEL.md` title/footer changed to `v0.4`.
-- `docs/WORKFLOW.md` title/footer changed to `v0.4`.
-- `docs/adr/ADR-008-preservation-first-mvp-vaultfolder-future-work.md` status changed to `Accepted`.
-- `docs/adr/README.md` ADR-008 status changed to `Accepted`.
-- `README.md` updated to show the VaultFolder De-scope Gate complete and the next
-  Storage Layout RFC 0001 Gate still pending.
-- `CHANGELOG.md` records the final approval.
+Decision:
 
-## Finalized Decisions
+- MVP keeps month-level `metadata.json`.
+- Example: `DuriStorage/timeline/2026/2026-07/metadata.json`.
+- Day-level partitions are Future Work if file size or performance becomes a problem.
 
-- MVP excludes VaultFolder Curation.
-- ADR-008 records Preservation-first MVP: VaultFolder Curation is Future Work.
-- Auth operating data remains excluded from Export.
-- Participant display names are memory display identity and are included in Export so
-  `messages.md` can remain human readable.
+Reason:
 
-## Still Draft
+- MVP is a two-person system.
+- MVP supports only Message and Photo.
+- Month-level files are simpler for initial implementation and file browsing.
 
-Storage Layout RFC 0001 remains Draft.
+### 2. Server Filesystem Durability
 
-Before implementation touches original-data write paths, backup/export, auth, or
-device/session code, RFC 0001 or its successor must pass a separate Gate.
+Decision:
 
-Open questions for that Gate:
+- `DuriStorage/` must be stored on persistent server-local storage or a mounted
+  persistent volume.
+- `DuriStorage/` must not be stored on an ephemeral filesystem.
+- Server restart, redeploy, or container recreation must not delete original data.
 
-1. Month-level `metadata.json` vs per-day partitions.
-2. Target deployment server filesystem durability guarantees.
+Required:
+
+- Original photos, Message text, and `metadata.json` are higher-priority preservation
+  targets than the DB.
+- DB/search indexes are performance caches and are not the original store.
+- `metadata.json` is written to a temp file first, verified, then renamed.
+- Use fsync or platform-equivalent durability calls where available.
+- Keep a separate backup in addition to the primary persistent volume.
+
+## Changed Artifacts
+
+- `docs/rfc/0001-storage-layout.md`
+  - Resolved both previous Open Questions.
+  - Added month-level partition as MVP decision.
+  - Added persistent storage requirements.
+  - Added day-level partitioning as rejected for MVP / Future Work.
+  - Expanded write integrity strategy with persistent volume, fsync best effort, and
+    backup requirements.
+- `README.md`
+  - Updated current phase to `Storage Layout RFC 0001 Gate Review Requested`.
+  - Marked monthly `metadata.json` and persistent disk/volume decisions complete.
+  - Shows remaining steps: Fable final review and CEO final approval.
+- `CHANGELOG.md`
+  - Records Storage Layout RFC 0001 Gate Review Request.
+- `agents_chatroom/2026-07-03-storage-layout-rfc-0001-gate-plan.md`
+  - Captures the review plan and acceptance boundary for this Gate.
+
+## Review Focus
+
+Please verify:
+
+1. RFC 0001 is consistent with ADR-001 Human Readable First.
+2. RFC 0001 is consistent with ADR-007 Storage is Export.
+3. RFC 0001 does not reintroduce VaultFolder Curation into MVP.
+4. Month-level `metadata.json` is sufficiently justified for MVP.
+5. Persistent disk/volume requirements are strong enough to protect original data.
+6. Auth operating data remains excluded while participant display identity remains
+   included for memory readability.
+7. RFC 0001 can proceed to CEO final approval for `Accepted` status.
+
+## Non-Final Boundary
+
+RFC 0001 remains Draft until Fable review and CEO final approval.
+
+This request does not authorize implementation of original-data write paths,
+backup/export, auth, or device/session code.
 
 ## Verification
 
 Codex ran:
 
-- `rg` checks for stale `Draft` / `Proposed` status on finalized documents.
-  - Remaining matches are expected historical entries, explicit "Draft 해제" text, or
-    RFC 0001's intentional Draft status.
+- `rg` checks for unresolved Open Questions and stale partition/durability wording.
+  - RFC 0001 no longer has an `Open Questions` section.
+  - Remaining Open Questions mention is this request's "resolved previous Open Questions"
+    summary.
+  - RFC 0001 still has `Status: Draft`, as intended.
 - `git diff --check`.
-- Manual README and ADR status review.
+- Manual README and RFC status review.
