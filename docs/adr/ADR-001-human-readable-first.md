@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-02
-- Related: PRD §10 Human Readable First, §9 Long-term Design Goals
+- Related: PRD §3 First Principle, §9 Long-term Design Goals, [DATA_MODEL.md §8 Storage Layout](../DATA_MODEL.md#8-storage-layout-원칙-스케치)
 
 ## Decision
 

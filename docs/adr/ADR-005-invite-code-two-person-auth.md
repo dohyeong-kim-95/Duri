@@ -2,7 +2,7 @@
 
 - Status: Accepted (CEO Decision #005)
 - Date: 2026-07-02
-- Related: PRD §8 Security Requirements, §11 Ownership, ADR-004
+- Related: PRD §8 Security Requirements, §10 Ownership, ADR-004
 
 ## Decision
 

@@ -2,7 +2,7 @@
 
 - Status: Accepted (CEO Decision #004)
 - Date: 2026-07-02
-- Related: PRD §7 Delivery Strategy, §12 Non Goals
+- Related: PRD §7 Delivery Strategy, §11 Non Goals
 
 ## Decision
 
