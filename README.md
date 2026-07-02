@@ -61,6 +61,8 @@ Design Gates Complete — Implementation Gate Next
 4. 저장 구조 자체가 Export다. DB는 검색/성능용 인덱스다.
 5. Authentication은 Self-hosted JWT + Invite Code + 기기별 Refresh Session으로 설계한다.
 6. 위치 Metadata는 사진 EXIF의 GPS 좌표만 원본으로 저장한다. 장소명/Alias는 Future Work의 View다.
+7. 초기 구현 스택은 TypeScript + Next.js frontend, Python + FastAPI backend,
+   FastAPI WebSocket, SQLite index/cache, filesystem `DuriStorage/` source of truth다.
 
 기록 방식: 1, 2, 5는 `DATA_MODEL.md` v0.4 승인 범위에 묶고, 3은 ADR-008,
 4는 ADR-007, 6은 ADR-006으로 기록한다.
@@ -84,12 +86,26 @@ CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 p
 
 구현 Gate 이월 확인 항목:
 
-- 앱 스택 선택: Codex 추천안은 TypeScript / Next.js / npm / SQLite cache +
-  filesystem `DuriStorage/`
 - N1: orphan media 복구 규칙
 - N2: 월 파티션 단위 쓰기 직렬화
 - N3: 백업 스펙(주기, 복원 테스트, 보관 위치, 암호화 키 관리)
 - 서버 하드닝 실적용 확인(계정, SSH, 권한)
+
+현재 허용된 구현 범위:
+
+- frontend/backend scaffold
+- dependency installation
+- lint/typecheck/test setup
+- basic CI
+- empty healthcheck endpoint
+- WebSocket proof-of-connection test
+
+아직 구현 금지:
+
+- original storage writes
+- authentication/device sessions
+- photo upload persistence
+- metadata write path
 
 ---
 
@@ -123,6 +139,17 @@ Timeline 보존 경험이 검증된 이후의 Future Work다.
 - [docs/EVENT_ENGINE.md](docs/EVENT_ENGINE.md) — (Future Work) Log가 Event로 자동 연결되는 규칙과 파이프라인 스케치
 - [docs/adr](docs/adr) — Architecture Decision Records
 - [docs/rfc](docs/rfc) — Request for Comments
+
+## Development
+
+```bash
+npm run dev:web
+.venv/bin/uvicorn duri_api.main:app --app-dir apps/api/src --reload
+```
+
+```bash
+bash scripts/ci.sh
+```
 
 ## Ownership
 

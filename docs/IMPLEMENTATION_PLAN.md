@@ -53,29 +53,51 @@ invokes before Gate review.
 
 ### Step 1 — App Stack Decision and Scaffold
 
-Status: needs CEO choice before adding dependencies.
+Status: approved by CEO on 2026-07-03; scaffold in progress.
 
-Recommended default:
+Approved stack:
 
-- TypeScript
-- Next.js
-- npm
-- SQLite for auth/search/index caches
-- Filesystem `DuriStorage/` as the canonical archive
+- Frontend: TypeScript + Next.js
+- Backend: Python + FastAPI
+- Realtime: FastAPI WebSocket
+- Index DB: SQLite
+- Source of Truth: filesystem `DuriStorage/`
+- Package managers: npm for frontend, uv or pip for backend
+- Deployment: self-hosted Mini PC with persistent disk/volume
 
 Reason:
 
 - ADR-004 requires a responsive web application.
-- Next.js keeps responsive UI and server endpoints in one deployable app.
-- Node can write the filesystem archive directly on a Mini PC.
+- Next.js is a good fit for mobile-first responsive UI.
+- FastAPI keeps realtime, file storage, EXIF/metadata extraction, and future Python
+  local processing in a clear backend boundary.
 - SQLite is enough for two-person auth/session/search indexes and remains a cache,
   not the source of truth.
+- `DuriStorage/` remains the canonical archive.
 
 Rejected for now:
 
 - Native mobile app: conflicts with Responsive Web First.
 - External auth/database platform: conflicts with ADR-005 and ownership goals.
 - DB as canonical archive: conflicts with ADR-001 and ADR-007.
+- Next.js-only backend: would put realtime, file storage, and metadata extraction inside
+  the web framework instead of a dedicated backend.
+
+Approved implementation scope:
+
+- frontend/backend scaffold
+- dependency installation
+- lint/typecheck/test setup
+- basic CI
+- empty healthcheck endpoints
+- WebSocket proof-of-connection test
+
+Not yet approved for implementation:
+
+- original storage writes
+- authentication/device sessions
+- photo upload persistence
+- metadata write path
 
 ### Step 2 — Storage Writer TDD
 
@@ -127,5 +149,5 @@ Required CEO/Fable topics:
 
 ## 4. Current Next Action
 
-Before installing dependencies or scaffolding the app, choose the implementation
-stack. Codex recommendation is the Step 1 default above.
+Finish the approved scaffold, verify CI, and then wait for Fable Gate Acceptance Spec
+before implementing original storage writes or authentication/session behavior.

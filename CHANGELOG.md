@@ -6,6 +6,34 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Initial Tech Stack Scaffold — 2026-07-03
+
+CEO Decision: Initial Tech Stack 반영.
+
+### Added
+
+- `apps/web` Next.js + TypeScript scaffold
+- `apps/api` FastAPI scaffold
+- FastAPI `/health` endpoint
+- FastAPI `/ws/probe` WebSocket proof-of-connection endpoint
+- Frontend/backend lint, typecheck, and test setup
+- CI를 Next build, npm test, pytest, ruff, mypy까지 확장
+
+### Changed
+
+- README Current Architecture와 Development 섹션에 approved stack 및 실행 명령 추가
+- Implementation Plan Step 1을 CEO-approved stack 기준으로 갱신
+
+### Guardrails
+
+- Original storage writes, auth/device sessions, photo upload persistence, and metadata
+  write path remain blocked until Fable Gate Acceptance Spec exists.
+- `npm audit` reports a moderate PostCSS advisory through Next.js 16.2.10. The suggested
+  `npm audit fix --force` would downgrade Next.js across major versions, so this remains
+  an upstream dependency risk to revisit when Next publishes a compatible patched release.
+
+---
+
 ## Implementation Plan v0.1 — 2026-07-03
 
 구현 착수 순서와 Gate 경계를 문서화.
