@@ -43,6 +43,7 @@ describe("API endpoint configuration", () => {
     const response = await fetchTimeline({
       apiBaseUrl: "https://duri.example.test",
       accessToken: "access-token",
+      filters: { period: "2026-07", type: "Message" },
       fetcher: async (input, init) => {
         const headers = new Headers(init?.headers);
         calls.push({
@@ -55,7 +56,7 @@ describe("API endpoint configuration", () => {
 
     expect(calls).toEqual([
       {
-        input: "https://duri.example.test/timeline",
+        input: "https://duri.example.test/timeline?period=2026-07&type=Message",
         authorization: "Bearer access-token",
       },
     ]);
@@ -69,13 +70,16 @@ describe("API endpoint configuration", () => {
       apiBaseUrl: "https://duri.example.test",
       accessToken: "access-token",
       query: "김치 찌개",
+      filters: { period: "2026-07", type: "Photo" },
       fetcher: async (input) => {
         calls.push(input.toString());
         return Response.json({ results: [] });
       },
     });
 
-    expect(calls).toEqual(["https://duri.example.test/search?q=%EA%B9%80%EC%B9%98%20%EC%B0%8C%EA%B0%9C"]);
+    expect(calls).toEqual([
+      "https://duri.example.test/search?period=2026-07&type=Photo&q=%EA%B9%80%EC%B9%98+%EC%B0%8C%EA%B0%9C",
+    ]);
   });
 
   it("raises a typed error when the API rejects the request", async () => {

@@ -54,6 +54,26 @@ input {
   padding: 0 10px;
 }
 
+select {
+  min-height: 36px;
+  border: 1px solid #c8c8c2;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #202020;
+  padding: 0 10px;
+}
+
+select:focus {
+  border-color: #202020;
+  outline: 2px solid #d8d8d0;
+  outline-offset: 1px;
+}
+
+select:disabled {
+  background: #ecece7;
+  color: #77776f;
+}
+
 input:focus {
   border-color: #202020;
   outline: 2px solid #d8d8d0;
@@ -138,6 +158,10 @@ input:disabled {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.filter-input {
+  width: 100%;
 }
 
 .timeline-panel {

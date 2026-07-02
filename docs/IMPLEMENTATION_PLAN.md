@@ -170,6 +170,7 @@ Expected behavior:
   `DuriStorage/` and requires AuthService access validation.
 - Frontend shell can call the read-only APIs when a future auth flow provides an
   access token.
+- Timeline/Search support read-only `period` and `type` filters.
 
 Gate boundary:
 

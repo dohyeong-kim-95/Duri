@@ -128,6 +128,7 @@ Gate 불필요 read-only 구현 완료:
 
 - `GET /timeline` reads Timeline logs from `DuriStorage/metadata.json`
 - `GET /search?q=...` filters Timeline logs from `DuriStorage/metadata.json`
+- Timeline/Search support read-only period and log type filters
 - Frontend Timeline/Search shell calls the read-only APIs when a future auth token exists
 
 다음 Gate review 필요:

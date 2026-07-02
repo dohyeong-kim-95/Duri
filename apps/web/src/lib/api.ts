@@ -32,6 +32,10 @@ export type SearchResponse = {
 };
 
 type Fetcher = (input: string | URL, init?: RequestInit) => Promise<Response>;
+export type TimelineFilters = {
+  period?: string;
+  type?: string;
+};
 
 export class ApiRequestError extends Error {
   constructor(
@@ -68,15 +72,17 @@ export function readStoredAccessToken(storage: Storage | undefined = safeLocalSt
 export async function fetchTimeline({
   apiBaseUrl = getApiBaseUrl(),
   accessToken,
+  filters,
   fetcher = fetch,
 }: {
   apiBaseUrl?: string;
   accessToken: string;
+  filters?: TimelineFilters;
   fetcher?: Fetcher;
 }): Promise<TimelineResponse> {
   return requestJson<TimelineResponse>({
     apiBaseUrl,
-    path: "/timeline",
+    path: withQuery("/timeline", filters),
     accessToken,
     fetcher,
   });
@@ -86,16 +92,18 @@ export async function searchTimeline({
   apiBaseUrl = getApiBaseUrl(),
   accessToken,
   query,
+  filters,
   fetcher = fetch,
 }: {
   apiBaseUrl?: string;
   accessToken: string;
   query: string;
+  filters?: TimelineFilters;
   fetcher?: Fetcher;
 }): Promise<SearchResponse> {
   return requestJson<SearchResponse>({
     apiBaseUrl,
-    path: `/search?q=${encodeURIComponent(query)}`,
+    path: withQuery("/search", { ...filters, q: query }),
     accessToken,
     fetcher,
   });
@@ -131,6 +139,18 @@ function safeLocalStorage(): Storage | undefined {
     return undefined;
   }
   return window.localStorage;
+}
+
+function withQuery(path: string, params: TimelineFilters & { q?: string } = {}): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    const cleaned = value?.trim();
+    if (cleaned) {
+      search.set(key, cleaned);
+    }
+  }
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 async function requestJson<T>({

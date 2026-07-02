@@ -45,5 +45,6 @@ Starting checklist for that future review:
 ## Current Action
 
 No Fable review is being requested by this file at this moment. Initial read-only
-Timeline/Search API connection and frontend shell are implemented. Codex must
-update this file before any future Gate 대상 implementation review request.
+Timeline/Search API connection, frontend shell, and read-only filters are
+implemented. Codex must update this file before any future Gate 대상 implementation
+review request.

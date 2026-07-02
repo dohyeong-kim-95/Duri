@@ -123,7 +123,14 @@ def create_app(
     @app.get("/timeline", tags=["data"])
     async def timeline(request: Request) -> dict[str, Any]:
         identity = require_identity(request)
-        return {"items": read_timeline_logs(storage_root), "identity": identity.as_dict()}
+        return {
+            "items": read_timeline_logs(
+                storage_root,
+                period=request.query_params.get("period"),
+                log_type=request.query_params.get("type"),
+            ),
+            "identity": identity.as_dict(),
+        }
 
     @app.get("/photos/{photo_path:path}", tags=["data"])
     async def photo(photo_path: str, request: Request) -> dict[str, Any]:
@@ -135,7 +142,12 @@ def create_app(
         identity = require_identity(request)
         query = request.query_params.get("q", "")
         return {
-            "results": search_timeline_logs(storage_root, query),
+            "results": search_timeline_logs(
+                storage_root,
+                query,
+                period=request.query_params.get("period"),
+                log_type=request.query_params.get("type"),
+            ),
             "identity": identity.as_dict(),
         }
 

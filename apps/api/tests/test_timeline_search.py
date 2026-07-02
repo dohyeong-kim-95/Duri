@@ -92,6 +92,46 @@ def test_timeline_endpoint_reads_logs_from_duri_storage(tmp_path: Path) -> None:
     assert items[1]["actor_display_name"] == "Partner"
 
 
+def test_timeline_endpoint_filters_by_period_and_type(tmp_path: Path) -> None:
+    storage_root = tmp_path / "DuriStorage"
+    writer = make_writer(storage_root)
+    writer.append_message(
+        log_id="01J_MSG_JULY",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:28:00+09:00"),
+        message_id="01J_MESSAGE_JULY",
+        text="7월 메시지",
+    )
+    writer.append_photo(
+        log_id="01J_PHOTO_JULY",
+        actor_id="01J_USER_2",
+        created_at=dt("2026-07-12T19:30:00+09:00"),
+        photo_bytes=b"july photo",
+        original_filename="july.jpg",
+        mime_type="image/jpeg",
+    )
+    writer.append_message(
+        log_id="01J_MSG_AUGUST",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-08-01T09:00:00+09:00"),
+        message_id="01J_MESSAGE_AUGUST",
+        text="8월 메시지",
+    )
+    auth_context = make_auth(tmp_path)
+
+    response = asyncio.run(
+        get_json(
+            auth=auth_context["service"],
+            storage_root=storage_root,
+            access_token=auth_context["access_token"],
+            path="/timeline?period=2026-07&type=Message",
+        )
+    )
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["items"]] == ["01J_MSG_JULY"]
+
+
 def test_search_endpoint_filters_timeline_logs_from_duri_storage(tmp_path: Path) -> None:
     storage_root = tmp_path / "DuriStorage"
     writer = make_writer(storage_root)
@@ -123,6 +163,46 @@ def test_search_endpoint_filters_timeline_logs_from_duri_storage(tmp_path: Path)
     assert response.status_code == 200
     results = response.json()["results"]
     assert [item["id"] for item in results] == ["01J_MSG_MATCH"]
+
+
+def test_search_endpoint_combines_query_period_and_type_filters(tmp_path: Path) -> None:
+    storage_root = tmp_path / "DuriStorage"
+    writer = make_writer(storage_root)
+    writer.append_message(
+        log_id="01J_MSG_JULY_MATCH",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:28:00+09:00"),
+        message_id="01J_MESSAGE_JULY_MATCH",
+        text="파스타 먹자",
+    )
+    writer.append_photo(
+        log_id="01J_PHOTO_JULY_MATCH",
+        actor_id="01J_USER_2",
+        created_at=dt("2026-07-12T19:30:00+09:00"),
+        photo_bytes=b"pasta photo",
+        original_filename="pasta.jpg",
+        mime_type="image/jpeg",
+    )
+    writer.append_message(
+        log_id="01J_MSG_AUGUST_MATCH",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-08-01T09:00:00+09:00"),
+        message_id="01J_MESSAGE_AUGUST_MATCH",
+        text="파스타 또 먹자",
+    )
+    auth_context = make_auth(tmp_path)
+
+    response = asyncio.run(
+        get_json(
+            auth=auth_context["service"],
+            storage_root=storage_root,
+            access_token=auth_context["access_token"],
+            path="/search?q=파스타&period=2026-07&type=Message",
+        )
+    )
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["results"]] == ["01J_MSG_JULY_MATCH"]
 
 
 def test_search_endpoint_returns_empty_results_for_blank_query(tmp_path: Path) -> None:

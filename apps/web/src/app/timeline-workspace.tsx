@@ -24,6 +24,8 @@ export function TimelineWorkspace({
   const [accessToken, setAccessToken] = useState("");
   const [items, setItems] = useState<TimelineLog[]>([]);
   const [query, setQuery] = useState("");
+  const [period, setPeriod] = useState("");
+  const [type, setType] = useState("");
   const [state, setState] = useState<LoadState>("idle");
   const [error, setError] = useState("");
 
@@ -57,7 +59,11 @@ export function TimelineWorkspace({
     setError("");
 
     try {
-      const response = await fetchTimeline({ apiBaseUrl, accessToken: token });
+      const response = await fetchTimeline({
+        apiBaseUrl,
+        accessToken: token,
+        filters: currentFilters(),
+      });
       setItems(response.items);
       setState("ready");
     } catch (caught) {
@@ -86,6 +92,7 @@ export function TimelineWorkspace({
         apiBaseUrl,
         accessToken,
         query,
+        filters: currentFilters(),
       });
       setItems(response.results);
       setState("ready");
@@ -103,6 +110,13 @@ export function TimelineWorkspace({
 
     setState("error");
     setError("Request failed");
+  }
+
+  function currentFilters() {
+    return {
+      period,
+      type,
+    };
   }
 
   return (
@@ -138,6 +152,36 @@ export function TimelineWorkspace({
             <div>
               <dt>WS</dt>
               <dd>{websocketUrl}</dd>
+            </div>
+            <div>
+              <dt>Period</dt>
+              <dd>
+                <input
+                  aria-label="Timeline period"
+                  className="filter-input"
+                  value={period}
+                  onChange={(event) => setPeriod(event.target.value)}
+                  placeholder="YYYY-MM"
+                  disabled={!accessToken || state === "loading"}
+                  inputMode="numeric"
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Type</dt>
+              <dd>
+                <select
+                  aria-label="Timeline type"
+                  className="filter-input"
+                  value={type}
+                  onChange={(event) => setType(event.target.value)}
+                  disabled={!accessToken || state === "loading"}
+                >
+                  <option value="">All</option>
+                  <option value="Message">Message</option>
+                  <option value="Photo">Photo</option>
+                </select>
+              </dd>
             </div>
           </dl>
         </aside>

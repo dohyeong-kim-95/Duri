@@ -8,10 +8,17 @@ from typing import Any, cast
 JsonObject = dict[str, Any]
 
 
-def read_timeline_logs(storage_root: Path | None) -> list[JsonObject]:
+def read_timeline_logs(
+    storage_root: Path | None,
+    *,
+    period: str | None = None,
+    log_type: str | None = None,
+) -> list[JsonObject]:
     if storage_root is None:
         return []
 
+    period_filter = _clean_filter(period)
+    type_filter = _clean_filter(log_type)
     logs: list[JsonObject] = []
     for metadata in _read_metadata_files(storage_root):
         participants = metadata.get("participants", {})
@@ -26,19 +33,27 @@ def read_timeline_logs(storage_root: Path | None) -> list[JsonObject]:
                 participants=participants,
                 actor_id=cast(str, item.get("actor_id", "")),
             )
+            if not _matches_filters(item, period=period_filter, log_type=type_filter):
+                continue
             logs.append(item)
 
     return _sorted_logs(logs)
 
 
-def search_timeline_logs(storage_root: Path | None, query: str) -> list[JsonObject]:
+def search_timeline_logs(
+    storage_root: Path | None,
+    query: str,
+    *,
+    period: str | None = None,
+    log_type: str | None = None,
+) -> list[JsonObject]:
     normalized_query = query.strip().casefold()
     if not normalized_query:
         return []
 
     return [
         log
-        for log in read_timeline_logs(storage_root)
+        for log in read_timeline_logs(storage_root, period=period, log_type=log_type)
         if normalized_query in _search_text(log).casefold()
     ]
 
@@ -64,6 +79,24 @@ def _display_name(*, participants: Any, actor_id: str) -> str:
             if isinstance(display_name, str):
                 return display_name
     return actor_id
+
+
+def _clean_filter(value: str | None) -> str | None:
+    cleaned = value.strip() if value is not None else ""
+    return cleaned or None
+
+
+def _matches_filters(
+    log: JsonObject,
+    *,
+    period: str | None,
+    log_type: str | None,
+) -> bool:
+    if period is not None and log.get("period") != period:
+        return False
+    if log_type is not None and str(log.get("type", "")).casefold() != log_type.casefold():
+        return False
+    return True
 
 
 def _sorted_logs(logs: list[JsonObject]) -> list[JsonObject]:

@@ -6,6 +6,31 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Read-only Timeline/Search Filters — 2026-07-03
+
+Read-only Timeline/Search usability improvement.
+
+### Added
+
+- `period` and `type` filters for `GET /timeline`
+- `period` and `type` filters for `GET /search`
+- Frontend filter controls for period and log type
+- Backend tests for combined query/period/type filtering
+
+### Guardrails
+
+- No original-data write path added
+- No auth HTTP endpoint added
+- No upload persistence added
+
+### Verification
+
+- Timeline/Search backend tests: `5 passed`
+- Frontend tests: `8 passed`
+- Backend/frontend lint and typecheck passed
+
+---
+
 ## Frontend Timeline/Search Shell — 2026-07-03
 
 Gate 불필요 read-only UI integration 반영.
