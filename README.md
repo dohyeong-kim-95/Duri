@@ -51,7 +51,7 @@ https://duri.bubblelab.dev
 
 ### Current Architecture
 
-Design Gates Complete — Auth/Session Gate Review Requested
+Design Gates Complete — Storage/Auth Service Gates Closed
 
 `DATA_MODEL.md` v0.4는 다음 CEO 결정을 반영한다.
 
@@ -86,10 +86,13 @@ Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
 
 Auth/Session Step 3은 Fable Gate Acceptance Spec v1.2 B1~B4를 테스트로
 먼저 작성해 실패를 확인한 뒤 구현했다. 10차 심사 C1(서명 키/해시 키
-도메인 분리)을 반영해 현재 Fable re-review 요청 상태다.
+도메인 분리)을 반영했고, 11차 심사에서 Gate 통과가 확인됐다.
 
-다만 Auth/Session 구현은 Gate 통과 전까지 제품 동작으로 확정되지 않는다.
-백업/Export 코드는 여전히 Gate 대상이다.
+다만 등록/로그인/갱신/폐기 HTTP 인증 엔드포인트와 photo upload persistence는
+아직 구현하지 않았다. 이 둘은 별도 Gate review 대상이다.
+
+예정된 1회성 적대적 보안 점검은 지금이 아니라, HTTP 인증 엔드포인트와
+업로드 경로가 구현된 뒤 첫 배포 직전에 수행한다.
 
 구현 Gate 이월 확인 항목:
 
@@ -97,6 +100,7 @@ Auth/Session Step 3은 Fable Gate Acceptance Spec v1.2 B1~B4를 테스트로
 - N2: 월 파티션 단위 쓰기 직렬화
 - N3: 백업 스펙(주기, 복원 테스트, 보관 위치, 암호화 키 관리)
 - 서버 하드닝 실적용 확인(계정, SSH, 권한)
+- 배포 직전 적대적 보안 점검(10차 심사 이월 관찰 6건 기준)
 
 Gate 통과:
 
@@ -108,9 +112,6 @@ Gate 통과:
 - `messages.md` regeneration
 - orphan media recovery
 - SQLite timeline index rebuild from `DuriStorage/`
-
-현재 구현 완료, Gate review 대기:
-
 - Auth/Session internal module
 - Fable Gate Acceptance Spec B1~B4 pytest suite (`gate_spec`)
 - two-person invite-code registration limit
@@ -122,6 +123,17 @@ Gate 통과:
 - access token expiry rejection
 - refresh session access token renewal
 - per-device session revocation
+
+Gate 불필요 read-only 구현 완료:
+
+- `GET /timeline` reads Timeline logs from `DuriStorage/metadata.json`
+- `GET /search?q=...` filters Timeline logs from `DuriStorage/metadata.json`
+
+다음 Gate review 필요:
+
+- registration/login/refresh/revocation HTTP auth endpoints
+- photo upload persistence
+- backup/export implementation
 
 이미 완료된 자율 범위:
 

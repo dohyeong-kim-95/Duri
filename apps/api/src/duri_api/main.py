@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any, Protocol
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from duri_api.auth import AuthError, AuthIdentity, AuthService
+from duri_api.timeline import read_timeline_logs, search_timeline_logs
 
 APP_VERSION = "0.1.0"
 
@@ -86,7 +88,10 @@ async def handle_timeline_websocket(
         return
 
 
-def create_app(auth_service: AuthService | None = None) -> FastAPI:
+def create_app(
+    auth_service: AuthService | None = None,
+    storage_root: Path | None = None,
+) -> FastAPI:
     app = FastAPI(title="Duri API", version=APP_VERSION)
 
     app.add_middleware(
@@ -118,7 +123,7 @@ def create_app(auth_service: AuthService | None = None) -> FastAPI:
     @app.get("/timeline", tags=["data"])
     async def timeline(request: Request) -> dict[str, Any]:
         identity = require_identity(request)
-        return {"items": [], "identity": identity.as_dict()}
+        return {"items": read_timeline_logs(storage_root), "identity": identity.as_dict()}
 
     @app.get("/photos/{photo_path:path}", tags=["data"])
     async def photo(photo_path: str, request: Request) -> dict[str, Any]:
@@ -128,7 +133,11 @@ def create_app(auth_service: AuthService | None = None) -> FastAPI:
     @app.get("/search", tags=["data"])
     async def search(request: Request) -> dict[str, Any]:
         identity = require_identity(request)
-        return {"results": [], "identity": identity.as_dict()}
+        query = request.query_params.get("q", "")
+        return {
+            "results": search_timeline_logs(storage_root, query),
+            "identity": identity.as_dict(),
+        }
 
     @app.websocket("/ws/probe")
     async def websocket_probe(websocket: WebSocket) -> None:

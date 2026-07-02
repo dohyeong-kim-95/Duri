@@ -128,7 +128,7 @@ Notes:
 
 ### Step 3 — Auth and Session TDD
 
-Status: implemented from Fable Gate Acceptance Spec v1.2; C1 re-review requested.
+Status: Gate passed in Fable 11th review.
 
 Implemented test subjects:
 
@@ -152,16 +152,28 @@ Notes:
 - `DuriStorage/` remains reserved for original Message/Photo canonical storage.
 - This step exposes only protected placeholder data endpoints; message/photo upload
   persistence remains gated separately.
+- The planned one-time adversarial security review is deferred until registration/login
+  HTTP endpoints and upload persistence exist, immediately before first deployment.
 
 ### Step 4 — Timeline and Search
 
-Status: can proceed after scaffold, but endpoint access must respect Auth Gate work.
+Status: initial read-only API connection implemented.
 
 Expected behavior:
 
 - Timeline sorts by `Log.created_at`.
 - Search/index data is rebuildable from `DuriStorage/`.
 - Metadata exploration remains derived and disposable.
+- This step may connect read-only Timeline/Search APIs to `DuriStorage/` and
+  rebuildable indexes.
+- Initial implementation reads canonical `metadata.json` files directly from
+  `DuriStorage/` and requires AuthService access validation.
+
+Gate boundary:
+
+- Read-only Timeline/Search connection can proceed without a new Gate request.
+- Registration/login/refresh/revocation HTTP auth endpoints remain Gate 대상.
+- Photo upload persistence remains Gate 대상.
 
 ### Step 5 — Backup Spec and Implementation
 
@@ -178,6 +190,6 @@ Required CEO/Fable topics:
 
 ## 4. Current Next Action
 
-Wait for Fable Gate review of Step 3 Auth/Session. If it passes, proceed to the
-planned one-time adversarial security review before treating Auth/Session behavior
-as accepted product behavior.
+Proceed with read-only Timeline/Search connection. Request Fable review before
+implementing HTTP auth endpoints, upload persistence, backup/export, or any new
+original-data write path.

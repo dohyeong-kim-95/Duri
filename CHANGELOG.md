@@ -6,6 +6,51 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Read-only Timeline/Search Connection — 2026-07-03
+
+Step 3 Gate 종료 후 진행 가능한 비-Gate 범위 반영.
+
+### Added
+
+- `duri_api.timeline` read-only query module
+- Authenticated `GET /timeline` response backed by `DuriStorage/metadata.json`
+- Authenticated `GET /search?q=...` response backed by `DuriStorage/metadata.json`
+- Timeline/Search API tests
+
+### Guardrails
+
+- No original-data write path added
+- No registration/login HTTP auth endpoint added
+- No photo upload persistence added
+- No backup/export implementation added
+
+### Verification
+
+- Timeline/Search tests: `3 passed`
+- Backend tests: `34 passed`
+- Gate spec: `29 passed`
+
+---
+
+## Auth/Session Gate Closed — 2026-07-03
+
+Fable 11차 Re-Review Pass와 Step 3 Auth/Session Gate 종료 반영.
+
+### Changed
+
+- README를 Storage/Auth service Gate 종료 상태로 갱신
+- 적대적 보안 점검 시점을 첫 배포 직전으로 이동
+- HTTP 인증 엔드포인트와 photo upload persistence는 별도 Gate review 대상으로 명시
+
+### Carryover
+
+- Timeline/Search read-only 연결은 진행 가능
+- 등록/로그인/갱신/폐기 HTTP auth endpoints는 Gate 대상
+- Photo upload persistence는 Gate 대상
+- 10차 심사의 보안 관찰 6건은 배포 직전 적대적 점검 시작 체크리스트
+
+---
+
 ## Auth/Session C1 Re-review Request — 2026-07-03
 
 Fable 10차 심사 Conditional Pass 조건 반영.

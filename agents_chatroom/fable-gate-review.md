@@ -5,6 +5,38 @@
 
 ---
 
+# 11차 심사 (Re-Review) — 2026-07-03, commit `e6c5d2b` (Step 3 C1 해소)
+
+- Scope: 10차 심사 C1 (서명 키/해시 키 도메인 분리) 해소 확인
+
+## Verdict: 통과 (Pass) — Step 3 Auth/Session Gate 종료
+
+- **C1 해소** ✓ — `AuthService`가 `jwt_secret`과 별도의 `hash_secret`을
+  요구하고, 동일 값 설정을 생성자에서 거부한다 (Fable이 직접 확인).
+  저장 해시는 용도별 도메인 접두어(`duri-auth:{purpose}:v1`)로 분리됐고
+  버전 태그까지 포함해 미래 해시 마이그레이션 여지도 남겼다 — 요구보다
+  한 단계 좋은 구현이다.
+- **B2-4 테스트** ✓ — 같은 DB에서 서명 키만 교체한 인스턴스로 구 access
+  token 거부 + 기존 refresh token 갱신 성공 + 새 토큰으로 실제 엔드포인트
+  200 응답까지 검증. red 상태 기록 확인. 기존 테스트 약화 없음.
+- Fable 환경 전체 31건 통과. Spec B 13개 항목(B1-1~B4-2) 전부 종료.
+- 부수: Codex가 구식 계획 노트 2건(`2026-07-02-data-model-v03-gate-note.md`,
+  `2026-07-03-storage-layout-rfc-0001-gate-plan.md`)을 삭제 — 자신의 작업
+  노트이고 git 이력에 보존되므로 허용. Fable 심사 기록은 본 파일에 온전하다.
+
+## Step 3 Gate 종료 판정 및 적대적 점검 시점
+
+Spec A(16) + B(13) = 29개 Gate 테스트 전부 존재·통과. 서비스 계층의
+Storage/Auth Gate가 모두 닫혔다.
+
+**적대적 보안 점검 시점 판단**: 예정된 1회성 점검은 등록/로그인/갱신/폐기
+**HTTP 엔드포인트**와 업로드 경로가 구현된 뒤, **첫 배포 직전**에 수행하는
+것이 옳다. 현재는 공격 표면(HTTP)이 아직 없어서 지금 점검하면 실제 공격
+벡터(rate limiting, 토큰 전달 방식, CORS 등)를 검증할 수 없다. 10차 심사의
+이월 관찰 6건이 그 점검의 시작 체크리스트다.
+
+---
+
 # 10차 심사 — 2026-07-03, commit `597849c` (Step 3: Auth/Session)
 
 - Scope: Gate 대상 ⑤ — `auth.py` + `main.py` 보호 엔드포인트 + Spec B 테스트 12건
