@@ -54,7 +54,7 @@ def search_timeline_logs(
     return [
         log
         for log in read_timeline_logs(storage_root, period=period, log_type=log_type)
-        if normalized_query in _search_text(log).casefold()
+        if normalized_query in timeline_search_text(log).casefold()
     ]
 
 
@@ -113,7 +113,7 @@ def _sort_datetime(log: JsonObject) -> datetime:
     return datetime.min
 
 
-def _search_text(log: JsonObject) -> str:
+def timeline_search_text(log: JsonObject) -> str:
     searchable = {
         "id": log.get("id"),
         "type": log.get("type"),

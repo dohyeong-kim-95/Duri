@@ -5,7 +5,6 @@ import json
 import mimetypes
 import os
 import re
-import sqlite3
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -13,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
+
+from duri_api import timeline_index as _timeline_index
 
 JsonObject = dict[str, Any]
 PathHook = Callable[[Path, Path], None]
@@ -368,45 +369,11 @@ class DuriStorageWriter:
 
 
 def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(db_path) as connection:
-        connection.execute("DROP TABLE IF EXISTS timeline")
-        connection.execute(
-            """
-            CREATE TABLE timeline (
-              log_id TEXT PRIMARY KEY,
-              type TEXT NOT NULL,
-              created_at TEXT NOT NULL,
-              actor_id TEXT NOT NULL,
-              period TEXT NOT NULL
-            )
-            """
-        )
-        for metadata_path in sorted(storage_root.glob("timeline/*/*/metadata.json")):
-            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-            period = metadata["period"]
-            for log in metadata["logs"]:
-                connection.execute(
-                    """
-                    INSERT INTO timeline (log_id, type, created_at, actor_id, period)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (log["id"], log["type"], log["created_at"], log["actor_id"], period),
-                )
-        connection.commit()
+    _timeline_index.rebuild_timeline_index(storage_root, db_path)
 
 
 def query_timeline_index(db_path: Path) -> list[JsonObject]:
-    with sqlite3.connect(db_path) as connection:
-        connection.row_factory = sqlite3.Row
-        rows = connection.execute(
-            """
-            SELECT log_id, type, created_at, actor_id, period
-            FROM timeline
-            ORDER BY created_at, log_id
-            """
-        ).fetchall()
-    return [dict(row) for row in rows]
+    return _timeline_index.query_timeline_index(db_path)
 
 
 def _render_messages_markdown(metadata: JsonObject) -> str:

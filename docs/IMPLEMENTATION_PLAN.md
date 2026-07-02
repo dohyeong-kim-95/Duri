@@ -171,6 +171,8 @@ Expected behavior:
 - Frontend shell can call the read-only APIs when a future auth flow provides an
   access token.
 - Timeline/Search support read-only `period` and `type` filters.
+- SQLite Timeline/Search index helpers can rebuild full-log read/search results
+  from `DuriStorage/`.
 
 Gate boundary:
 
@@ -193,6 +195,6 @@ Required CEO/Fable topics:
 
 ## 4. Current Next Action
 
-Proceed with read-only Timeline/Search connection. Request Fable review before
-implementing HTTP auth endpoints, upload persistence, backup/export, or any new
-original-data write path.
+Continue read-only Timeline/Search integration and UI refinement. Request Fable
+review before implementing HTTP auth endpoints, upload persistence, backup/export,
+or any new original-data write path.

@@ -6,6 +6,30 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Read-only SQLite Timeline Index — 2026-07-03
+
+Rebuildable Timeline/Search index improvement.
+
+### Added
+
+- `duri_api.timeline_index` full-log read helpers
+- Indexed Timeline filtering by period and log type
+- Indexed search that matches filesystem-backed search results after rebuild
+
+### Guardrails
+
+- SQLite remains a derived cache/index, not source of truth
+- No original-data write endpoint added
+- No auth HTTP endpoint added
+- No upload persistence added
+
+### Verification
+
+- Timeline index tests: `2 passed`
+- Storage Writer Gate spec: `16 passed`
+
+---
+
 ## Read-only Timeline/Search Filters — 2026-07-03
 
 Read-only Timeline/Search usability improvement.
