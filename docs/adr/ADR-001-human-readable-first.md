@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-02
-- Related: PRD §3 First Principle, §9 Long-term Design Goals, [DATA_MODEL.md §8 Storage Layout](../DATA_MODEL.md#8-storage-layout-원칙-스케치)
+- Related: PRD §3 First Principle, §9 Long-term Design Goals, [DATA_MODEL.md §10 Storage Layout / Export v1](../DATA_MODEL.md#10-storage-layout--export-v1)
 
 ## Decision
 

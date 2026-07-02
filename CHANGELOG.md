@@ -6,6 +6,48 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## PRD v0.2.4 Draft — 2026-07-02
+
+CEO Decisions for DATA_MODEL과 PRD 표현 정합성 반영 초안. Fable Gate Review와
+CEO 최종 승인 전까지 확정본이 아니다.
+
+### Changed
+
+- Core User Experience에서 일정 공유를 Future Work로 명시
+- Future Work에 추가 Log Type(Schedule, Place, Gift, Note, Voice 등)을 명시
+
+---
+
+## DATA_MODEL v0.3 Draft — 2026-07-02
+
+CEO Decisions for DATA_MODEL 반영 초안. Fable Gate Review와 CEO 최종 승인
+전까지 확정본이 아니다.
+
+### Added
+
+- **DATA_MODEL v0.3 Draft** — MVP Log Type을 `Message`, `Photo`로 제한
+- Authentication 엔터티 추가: `User`, `InviteCode`, `Device`, `Session`
+- Export-as-storage 원칙 명시 — Markdown / JSON / 원본 사진 파일이 원본 보존 구조
+- Search/DB는 원본이 아니라 재생성 가능한 인덱스임을 명시
+- **ADR-006 Proposed** — Location Metadata는 사진 EXIF의 GPS 좌표만 원본으로 저장
+
+### Changed
+
+- Metadata 원칙을 "추출만 하고 해석하지 않는다"로 명확화
+- Vault를 MVP에서 Metadata 기반 탐색/정리 인터페이스로 정리
+- `WORKFLOW.md`의 PWA 성공 조건 표현을 Responsive Web URL 접근으로 수정
+- `EVENT_ENGINE.md`의 DATA_MODEL 참조를 v0.3 섹션 구조에 맞게 수정
+
+### Deferred
+
+- Schedule / Place / Gift / Note / Voice Log Type
+- AI/NLP 기반 사람·장소·날짜 추출
+- GPS -> 장소명 변환
+- Location Alias
+- AI 자동 분류 / Event Engine
+
+---
+
 ## PRD v0.2.3 — 2026-07-02
 
 Phase 1 Gate 반영 (CEO Decision #004, #005). v0.2.2에 대한 Patch.

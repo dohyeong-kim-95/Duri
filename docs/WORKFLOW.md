@@ -5,9 +5,10 @@
 > 데이터 구조는 [DATA_MODEL.md](./DATA_MODEL.md), Future Work인 자동 클러스터링
 > 로직은 [EVENT_ENGINE.md](./EVENT_ENGINE.md) 참고.
 >
-> **v0.2 변경 요약**: PRD v0.2.2의 [Timeline First](./PRD.md#43-timeline-first)
-> 원칙에 따라 MVP 워크플로우에서 Event 자동 생성 단계를 제거했다. Log는
-> Event를 거치지 않고 곧바로 Timeline에 쌓인다.
+> **v0.3 변경 요약**: CEO Decisions for DATA_MODEL에 따라 MVP Log Type은
+> `Message`, `Photo` 두 가지로 제한한다. Metadata는 AI 해석 없이 원본에서
+> 기계적으로 추출 가능한 값만 저장하며, Responsive Web URL 접근을 MVP
+> 전달 방식으로 둔다.
 
 ---
 
@@ -18,20 +19,20 @@
 ──────────────            ─────────────────────────────
 채팅한다           ───▶   Log(Message) 생성 + Metadata 자동 생성
 사진을 보낸다       ───▶   Log(Photo) 생성 + 원본 무손실 저장 + Metadata(EXIF 등) 생성 + 자동 백업
-일정을 공유한다     ───▶   Log(Schedule) 생성 + Metadata 자동 생성
+사진 Metadata        ───▶   EXIF/GPS/해상도/파일 크기/파일 해시 추출 (해석 없음)
                             │
                             ▼
                      Timeline에 시간순 반영 (즉시, Event 단계 없음)
                             │
                             ▼
-              사용자가 원할 때 Vault 폴더에 직접 담아 정리 (선택)
+              Metadata 기반 Vault 탐색/정리 (AI 자동 정리 없음)
                             │
                             ▼
-        "2026년 여름" / "서울숲" / "부산 여행" 등으로 검색해 다시 탐색
+        기간 / 메시지에 직접 등장한 단어 / 사진 Metadata 등으로 다시 탐색
 ```
 
-사용자가 명시적으로 수행하는 행동은 **기록을 만드는 행동(채팅, 업로드,
-일정 입력 등)**과, 선택적으로 **Vault 폴더 정리**뿐이다. Log 저장,
+사용자가 명시적으로 수행하는 행동은 **기록을 만드는 행동(채팅, 사진 업로드)**과,
+선택적으로 **Vault 탐색/정리**뿐이다. Log 저장,
 Timeline 반영, Metadata 생성, 자동 백업은 시스템이 자동으로 수행한다
 ([PRD §5](./PRD.md#5-core-user-experience)).
 
@@ -40,23 +41,23 @@ Timeline 반영, Metadata 생성, 자동 백업은 시스템이 자동으로 수
 [PRD §6 MVP Goal](./PRD.md#6-mvp-goal) 기준으로, 초기 구현은 아래 흐름만
 검증하면 된다.
 
-1. 1:1 채팅 / 사진 전송 → Log 생성
+1. 1:1 채팅 / 사진 전송 → `Message`, `Photo` Log 생성
 2. 원본 사진 저장 + 자동 백업
-3. Log 생성 시 Metadata 자동 생성 ([DATA_MODEL.md §3.2](./DATA_MODEL.md#32-metadata-mvp-핵심-기능))
+3. Log 생성 시 기계적으로 추출 가능한 Metadata 생성
 4. Timeline에서 시간순 확인 (Event 클러스터링 없이 Log를 그대로 나열)
 5. 검색으로 다시 찾기
-6. PWA로 접근 가능
+6. Responsive Web URL로 접근 가능
 
 Event 자동 생성, AI 자동 분류, 여행/데이트 자동 생성, AI Memory, 다양한
 View 자동 생성은 모두 **Future Work**다 ([PRD §6](./PRD.md#6-mvp-goal),
-[§9 Non Goals](./PRD.md#11-non-goals)). Vault 폴더 정리도 MVP에서는 자동
-분류 없이 사용자가 직접 담는 것을 기본으로 한다.
+[§9 Non Goals](./PRD.md#11-non-goals)). Vault는 MVP에서 Metadata 기반
+탐색/정리 인터페이스로 시작하며 AI 자동 정리는 하지 않는다.
 
 ### 1.2 실패/예외 처리 원칙
 
 - Metadata 생성이 실패하거나 지연되어도 Log 저장/조회는 항상 가능해야
-  한다. Metadata는 파생 정보이므로 재계산 가능해야 한다
-  ([DATA_MODEL.md §3.2](./DATA_MODEL.md#32-metadata-mvp-핵심-기능)).
+  한다. Metadata는 원본에서 추출 가능한 파생 정보이므로 재계산 가능해야
+  한다. Metadata는 해석하지 않는다.
 - 원본 미디어(사진 등)는 어떤 자동화 실패와도 무관하게 항상 보존된다
   ([PRD §9](./PRD.md#9-long-term-design-goals)).
 - AI가 생성하는 모든 View(요약/추천/분류 제안 등)는 원본을 변경하지 않고,

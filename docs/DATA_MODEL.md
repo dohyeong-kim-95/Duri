@@ -1,208 +1,411 @@
-# Duri Data Model v0.2
+# Duri Data Model v0.3 Draft
 
-> 이 문서는 [PRD](./PRD.md)의 4.2 ~ 4.5 (Everything is a Log / Timeline First /
-> Vault / AI as Reader)를 데이터 모델 수준으로 구체화한다.
+> 이 문서는 [PRD](./PRD.md)의 Everything is a Log / Timeline First /
+> Vault / AI as Reader 원칙과 CEO Decisions for DATA_MODEL을 데이터 모델
+> 수준으로 구체화한다.
 >
-> **v0.2 변경 요약**: PRD v0.2.2에서 MVP는 Event를 생성하지 않는다
-> ([PRD §4.3 Timeline First](./PRD.md#43-timeline-first)). Log는 Event를
-> 거치지 않고 곧바로 Timeline에 쌓이며, Vault는 Event가 아닌 Log를 폴더
-> 구조로 직접 담는다. Event는 [Future Work](#7-future-work-event)로 이동했다.
+> **Status: Draft — Pending Fable Gate Review.**
+>
+> **v0.3 Draft 변경 요약**: MVP Log Type을 `Message`, `Photo`로 제한하고,
+> Metadata는 AI 해석 없이 원본에서 기계적으로 추출 가능한 값만 저장한다.
+> ADR-005에 따라 Authentication 엔터티(`User`, `Device`, `InviteCode`,
+> `Session`)를 추가했고, ADR-006에 따라 위치 원본 Metadata는 사진 EXIF의
+> GPS 좌표까지만 저장한다.
 
 ---
 
 ## 1. Design Principles
 
-1. **Log is the only atomic unit.** Message, Photo, Schedule, Place, Gift, Note,
-   Voice 등 모든 기록 타입은 `Log`라는 동일한 개념으로 저장된다.
-   새로운 기능은 새로운 Log Type을 추가하는 것으로 확장된다.
-2. **Timeline First.** Log는 파생 없이 바로 Timeline에 시간순으로 쌓인다.
-   Event 같은 상위 클러스터링 레이어는 MVP에 존재하지 않는다
-   ([PRD §4.3](./PRD.md#43-timeline-first)). 대신 미래에 Event Engine이나
-   AI가 활용할 수 있도록 Log 생성 시점에 **Metadata를 최대한 축적**한다.
-3. **Store simply, read smart.** ([PRD §3](./PRD.md#3-first-principle))
-   원본은 단순하고 안정적인 구조로 저장하고, "똑똑함"은 저장이 아니라
-   읽기(View 생성) 단계에서만 발휘한다. 저장 스키마 자체를 영리하게
-   만들려는 시도를 지양한다.
-4. **Vault is folders, not tags.** ([PRD §4.4](./PRD.md#44-vault)) Vault는
-   태그 기반 자동 분류 시스템이 아니라, 사람이 이해할 수 있는 폴더
-   계층이다. 폴더는 저장 구조인 동시에 탐색 UX다.
-5. **AI as Reader.** ([PRD §4.5](./PRD.md#45-ai-as-reader)) AI는 Log/Timeline/
-   Vault 원본을 생성하거나 수정하지 않는다. 검색·회상·요약·분류·View 생성만
-   수행하며, 그 결과물은 언제든 원본으로부터 재생성 가능해야 한다. AI 산출물은
-   원본과 분리된 **derived View**로만 저장한다.
-6. **Human Readable First, originals never lost.**
-   ([PRD §9](./PRD.md#9-long-term-design-goals)) 모든 엔티티는 앱이 죽어도
-   사람이 파일 시스템에서 직접 열어볼 수 있는 형태(JSON/Markdown + 원본
-   미디어 파일)로 저장되는 것을 원칙으로 한다. 사진 등 원본 미디어는
-   무손실로 별도 보관한다.
+1. **Log is the only atomic unit.** 모든 기록은 `Log`라는 동일한 봉투로
+   저장된다. MVP에서 지원하는 Log Type은 `Message`, `Photo` 두 가지뿐이다.
+2. **Metadata extracts, never interprets.** Metadata는 원본에서 기계적으로
+   추출 가능한 값만 저장한다. 사람 이름, 장소명, 여행/데이트 분류, AI 요약,
+   AI 태깅은 MVP에서 하지 않는다.
+3. **Timeline First.** Log는 Event를 거치지 않고 바로 Timeline에 시간순으로
+   쌓인다. Event Engine은 Future Work다.
+4. **Vault is metadata-based exploration.** MVP의 Vault는 Metadata를 이용해
+   기록을 탐색하고 정리하는 인터페이스다. AI 자동 정리나 Event 기반 분류는
+   Future Work다.
+5. **AI as Reader.** AI는 원본 데이터(Log, Media, Timeline, Vault)를 생성하거나
+   수정하지 않는다. AI 산출물은 원본에서 재생성 가능한 `View`로만 취급한다.
+6. **Storage is export.** 저장 구조 자체가 Export다. 앱이 없어도 파일 탐색기와
+   표준 도구로 Markdown, JSON, 원본 사진 파일을 확인할 수 있어야 한다.
+7. **DB is an index, not the source of truth.** DB와 검색 인덱스는 성능을 위한
+   파생 캐시다. 원본 데이터는 Human Readable 저장 구조에 보존된다.
+8. **Authentication is part of the MVP data model.** 공개 URL 배포를 전제로,
+   모든 데이터 접근은 Self-hosted JWT + Invite Code 인증 이후에만 가능하다.
 
 ---
 
 ## 2. Entity Overview
 
-| Entity     | 정의 | 생성 주체 |
-|------------|------|-----------|
-| `Log`      | 발생한 사실 하나를 표현하는 최소 기록 단위 (원본) | 사용자 행동(직접) 또는 시스템(자동 수집) |
-| `Timeline` | 모든 Log를 시간순으로 나열한 뷰/인덱스 | 시스템이 자동 유지 (Log 저장과 동시) |
-| `Vault`    | 사람이 만든 폴더 구조로 Log를 다시 담는 탐색 공간 | 사용자(수동) + 시스템 제안(선택) |
-| `View`     | AI가 원본으로부터 만들어내는 파생 결과(요약/분류/추천 등) | AI (읽기 전용, 원본과 분리 저장) |
+### 2.1 Memory Archive Entities
 
-MVP 관계: `Log (N) — (1) Timeline position` (자동), `Log (N) — (N) Vault`
-(사용자가 폴더에 담음). Event는 MVP에 존재하지 않는다 (§7 참고).
+| Entity | 정의 | MVP 여부 |
+|--------|------|----------|
+| `Log` | 발생한 사실 하나를 표현하는 최소 기록 단위 | MVP |
+| `MediaRef` | 원본 미디어 파일에 대한 참조와 무결성 정보 | MVP |
+| `Timeline` | 모든 Log를 `created_at` 기준으로 정렬한 인덱스/뷰 | MVP |
+| `Vault` | Metadata 기반 탐색/정리 인터페이스와 Export 폴더 구조 | MVP |
+| `View` | AI 또는 시스템이 원본에서 만든 파생 결과 | Future Work 중심 |
+
+### 2.2 Authentication Entities
+
+| Entity | 정의 | MVP 여부 |
+|--------|------|----------|
+| `User` | Duri를 사용하는 두 사람 중 한 명 | MVP |
+| `InviteCode` | 1회용 등록 코드 | MVP |
+| `Device` | 사용자가 인증한 기기 | MVP |
+| `Session` | 기기별로 폐기 가능한 Refresh Session | MVP |
+
+MVP 관계:
+
+- `User (1) -> (N) Log`
+- `Log (N) -> (1) Timeline position`
+- `Log (N) -> (N) Vault`
+- `User (1) -> (N) Device`
+- `Device (1) -> (N) Session`
+- `InviteCode (1) -> (0..1) User`
+
+Event는 MVP에 존재하지 않는다.
 
 ---
 
-## 3. Log
+## 3. MVP Log Types
 
-Log는 모든 기록의 공통 봉투(envelope)다. `type`에 따라 `payload`의 형태만 달라진다.
+MVP에서 처음부터 기록하는 대상은 두 가지다.
 
-| Field         | Type                | Description |
-|---------------|---------------------|-------------|
-| `id`          | ULID                | 정렬 가능한 고유 식별자 |
-| `type`        | `LogType`           | Message / Photo / Schedule / Place / Gift / Note / Voice ... |
-| `created_at`  | ISO 8601 datetime   | Log가 발생한 시각 (수집 시각이 아닌 원 사건 시각 우선) |
-| `ingested_at` | ISO 8601 datetime   | 시스템이 실제로 수집한 시각 |
-| `actor`       | `person` reference  | 이 Log를 만든 사람(두 사용자 중 1명) 또는 `system` |
-| `source`      | string              | 수집 경로 (예: `chat`, `upload`, `calendar_sync`) |
-| `location`    | `GeoPoint?`         | 선택. 위도/경도 + 원문 주소 |
-| `media_refs`  | `MediaRef[]`        | 원본 파일 참조 (사진/음성 등). 파일 자체는 별도 스토리지에 원본 보존 |
-| `payload`     | `LogType`별 스키마  | 타입별 본문 (아래 3.1 참고) |
-| `metadata`    | `object`            | 시스템이 자동 생성하는 부가 정보 (아래 3.2 참고). **원본 payload는 절대 덮어쓰지 않는다** |
-| `tags`        | string[]            | 자유 태그 (사용자 입력 또는 metadata에서 승격). Vault 폴더링의 보조 신호일 뿐, 필수 아님 |
+1. `Message`
+2. `Photo`
 
-Log에는 `event_id`가 없다. Event 레이어가 MVP에 존재하지 않기 때문이다
-(구버전 v0.1 모델과의 주요 차이).
+Future Work:
 
-### 3.1 Payload by LogType (초기 스케치)
+- `Schedule`
+- `Place`
+- `Gift`
+- `Note`
+- `Voice`
+- 기타 Log Type
 
-- `Message`: `{ text, thread_id }`
-- `Photo`: `{ media_ref, caption?, exif? }`
-- `Schedule`: `{ title, start_at, end_at?, place? }`
-- `Place`: `{ name, address, geo }`
-- `Gift`: `{ title, from, to, memo? }`
-- `Note`: `{ text }`
-- `Voice`: `{ media_ref, transcript? }`
+MVP는 Log Type을 많이 늘리는 것이 아니라, 가장 자주 발생하는 Message와
+Photo를 완전하게 저장하는 것을 우선한다.
 
-> 세부 스키마는 각 Log Type이 실제 구현될 때 RFC로 확정한다
-> ([docs/rfc](./rfc/README.md) 참고).
+---
 
-### 3.2 Metadata (MVP 핵심 기능)
+## 4. Log
 
-PRD v0.2.2의 MVP 기능 중 하나가 "Metadata 자동 생성"이다
-([PRD §6](./PRD.md#6-mvp-goal)). Metadata는 Log 생성 시점에 최대한
-자동으로 채워지는 부가 정보로, **지금 당장 쓰이지 않아도 미래의 Event
-Engine/AI가 활용할 수 있도록 축적**하는 것이 목적이다.
+Log는 모든 기록의 공통 봉투(envelope)다. `type`에 따라 `payload`만 달라진다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 정렬 가능한 고유 식별자 |
+| `type` | `Message` \| `Photo` | MVP Log Type |
+| `created_at` | ISO 8601 datetime | 사건이 발생한 시각 |
+| `ingested_at` | ISO 8601 datetime | 시스템이 실제로 저장한 시각 |
+| `actor_id` | `User.id` \| `system` | Log를 만든 사람 또는 시스템 |
+| `source` | string | 수집 경로. 예: `chat`, `photo_upload` |
+| `media_refs` | `MediaRef[]` | 원본 미디어 참조 |
+| `payload` | object | Log Type별 원본 본문 |
+| `metadata` | object | 원본에서 기계적으로 추출한 값 |
+
+Log에는 `event_id`가 없다. Event 레이어가 MVP에 존재하지 않기 때문이다.
+
+### 4.1 Message Payload
+
+```json
+{
+  "message_id": "01J...",
+  "text": "오늘 저녁 뭐 먹을까?",
+  "thread_id": "default"
+}
+```
+
+MVP Message Metadata:
+
+| Field | Description |
+|-------|-------------|
+| `sender_id` | 송신자 User ID |
+| `created_at` | 생성 시각 |
+| `message_id` | 메시지 고유 ID |
+
+MVP에서 하지 않는 것:
+
+- 사람 이름 추출
+- 장소 이름 추출
+- 날짜 의미 해석
+- AI 요약
+- AI 태깅
+
+### 4.2 Photo Payload
+
+```json
+{
+  "media_ref_id": "01J...",
+  "caption": null
+}
+```
+
+MVP Photo Metadata:
+
+| Field | Description |
+|-------|-------------|
+| `captured_at` | EXIF 촬영 시각. 없으면 null |
+| `gps` | EXIF GPS 좌표. 없으면 null |
+| `exif` | 원본 EXIF에서 보존 가능한 값 |
+| `width` | 이미지 너비 |
+| `height` | 이미지 높이 |
+| `size_bytes` | 파일 크기 |
+| `sha256` | 파일 해시 |
+
+MVP에서 하지 않는 것:
+
+- GPS -> 장소명 변환
+- GPS -> 행정구역 변환
+- AI 장소 추론
+- 자동 여행/데이트 분류
+
+위치 원본 Metadata는 사진 EXIF의 GPS 좌표만 저장한다. 의미는 나중에
+파생 View나 사용자가 정의한 Alias로 부여한다.
+
+---
+
+## 5. MediaRef
+
+`MediaRef`는 원본 미디어 파일을 잃지 않기 위한 참조 엔터티다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `log_id` | `Log.id` | 이 미디어를 포함한 Log |
+| `original_filename` | string? | 업로드 시 원래 파일명 |
+| `mime_type` | string | 예: `image/jpeg` |
+| `storage_path` | string | Export 저장 구조 안의 상대 경로 |
+| `size_bytes` | integer | 파일 크기 |
+| `sha256` | string | 원본 무결성 검증용 해시 |
+| `created_at` | datetime | 저장 시각 |
+
+사진 원본은 변환하거나 압축하지 않고 그대로 보존한다. 썸네일이나 최적화 이미지는
+파생 캐시로만 취급한다.
+
+---
+
+## 6. Timeline
+
+Timeline은 별도의 원본 엔터티라기보다, 모든 Log를 `created_at` 기준으로
+정렬한 인덱스/뷰다. Log가 저장되는 순간 자동으로 Timeline에 반영된다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `log_id` | `Log.id` | 참조 |
+| `position_at` | datetime | 정렬 기준 시각 |
+
+Timeline 조회는 기간, 사람, 타입, 사진 GPS 존재 여부 같은 Metadata 조건으로
+필터링할 수 있어야 한다.
+
+---
+
+## 7. Vault
+
+MVP의 Vault는 Metadata를 이용해 기록을 탐색하고 정리하는 인터페이스다.
+자동 Event 생성이나 AI 분류를 하지 않는다.
+
+Vault는 저장 구조이기도 하다. 사용자는 Duri 앱이 없어도 폴더와 파일을 열어
+데이터를 확인할 수 있어야 한다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `path` | string | 사람이 읽을 수 있는 폴더 경로 |
+| `name` | string | 표시 이름 |
+| `parent_id` | `Vault.id?` | 상위 폴더 |
+| `log_ids` | `Log.id[]` | 이 폴더 또는 탐색 결과에 포함된 Log 목록 |
+| `metadata_filter` | object? | 기간, 타입, GPS 존재 여부 등 탐색 조건 |
+| `cover_ref` | `MediaRef?` | 대표 이미지 |
+| `updated_at` | datetime | 마지막 갱신 시각 |
+
+AI가 Vault를 자동 정리하는 기능은 MVP에 포함하지 않는다. 향후 AI 제안이
+도입되더라도 실제 원본 Vault를 직접 변경하지 않고 `View`로만 제공한다.
+
+---
+
+## 8. View
+
+`View`는 원본에서 재생성 가능한 파생 결과다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `kind` | string | `search_result`, `location_alias`, `summary`, `classification_suggestion` 등 |
+| `source_log_ids` | `Log.id[]` | View 생성에 사용된 원본 Log |
+| `generated_by` | string | 생성한 로직 또는 모델 |
+| `content` | any | View 본문 |
+| `generated_at` | datetime | 생성 시각 |
+
+MVP에서 AI View는 필수 기능이 아니다. 특히 다음은 Future Work다.
+
+- AI 요약
+- AI 태깅
+- AI 자동 분류
+- Location Alias 자동 생성
+- 여행/데이트 자동 생성
+
+### 8.1 Future Work: Location Alias
+
+사용자는 나중에 직접 권역 Alias를 정의할 수 있다.
+
+예:
+
+- 서울숲
+- 청주 집 근처
+- 부산 여행
+- 우리 단골 카페
+
+Alias는 원본 Metadata가 아니라 `View` 계층으로 관리한다.
+
+원본은 GPS 좌표만 저장하고, 의미는 나중에 부여한다.
+
+---
+
+## 9. Authentication
+
+MVP는 공개 URL에서 제공되므로 Authentication은 필수다. 인증 방식은
+Self-hosted JWT + Invite Code다. 외부 Auth Provider는 사용하지 않는다.
+
+### 9.1 User
+
+등록 가능한 사용자는 정확히 2명이다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `slot` | `1` \| `2` | 두 사용자 중 어느 슬롯인지 |
+| `display_name` | string | 표시 이름 |
+| `created_at` | datetime | 등록 시각 |
+| `status` | `active` \| `disabled` | 사용자 상태 |
+
+### 9.2 InviteCode
+
+Invite Code는 1회 사용 후 만료된다. 원문 코드는 저장하지 않고 해시만 저장한다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `code_hash` | string | 초대 코드 해시 |
+| `intended_slot` | `1` \| `2` | 등록 대상 사용자 슬롯 |
+| `created_at` | datetime | 생성 시각 |
+| `expires_at` | datetime? | 만료 시각 |
+| `consumed_at` | datetime? | 사용 시각 |
+| `consumed_by_user_id` | `User.id?` | 등록된 사용자 |
+
+### 9.3 Device
+
+기기는 사용자별로 기억되며, 서버에서 개별 폐기할 수 있어야 한다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `user_id` | `User.id` | 소유 사용자 |
+| `label` | string? | 사용자가 알아볼 수 있는 이름 |
+| `fingerprint_hash` | string? | 기기 식별 보조값. 원문 fingerprint는 저장하지 않음 |
+| `created_at` | datetime | 등록 시각 |
+| `last_seen_at` | datetime? | 마지막 사용 시각 |
+| `revoked_at` | datetime? | 폐기 시각 |
+
+### 9.4 Session
+
+Access Token은 짧게 살고, 장기 로그인은 기기별 Refresh Session으로 관리한다.
+서버는 Refresh Session을 폐기해 특정 기기만 로그아웃시킬 수 있어야 한다.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | ULID | 고유 식별자 |
+| `user_id` | `User.id` | 사용자 |
+| `device_id` | `Device.id` | 인증된 기기 |
+| `refresh_token_hash` | string | Refresh Token 해시 |
+| `issued_at` | datetime | 발급 시각 |
+| `expires_at` | datetime? | 만료 시각 |
+| `last_used_at` | datetime? | 마지막 사용 시각 |
+| `revoked_at` | datetime? | 폐기 시각 |
+
+보안 원칙:
+
+- Invite Code와 Refresh Token 원문은 저장하지 않는다.
+- Access JWT는 짧게 유지하고 서버 저장 원본으로 취급하지 않는다.
+- 모든 데이터 접근은 인증 이후에만 가능하다.
+
+---
+
+## 10. Storage Layout / Export v1
+
+저장 구조 자체가 Export다. DB 없이도 사람이 폴더와 파일을 열어 데이터를
+확인할 수 있어야 한다.
 
 예시:
 
-- Photo: EXIF(촬영 시각/GPS/카메라 정보), 이미지 해상도, 파일 해시
-- Message: 언급된 장소/인물/날짜 후보(추출 시), 언어
-- 공통: 요일, 시간대, 대략적 위치 지명(역지오코딩 결과)
-
-metadata는 **파생 정보이며 신뢰도가 있을 수 있다**. payload(원본 입력)와
-분리해서 저장하고, metadata 생성 로직이 바뀌면 언제든 재계산해서
-덮어쓸 수 있어야 한다(payload는 절대 재계산 대상이 아님).
-
----
-
-## 4. Timeline
-
-Timeline은 별도의 저장 엔티티라기보다, 모든 Log를 `created_at` 기준으로
-정렬한 **인덱스/뷰**다. Log가 저장되는 순간 자동으로 Timeline에 반영된다.
-MVP에서는 Event 같은 중간 집계 레이어 없이 Log가 곧 Timeline의 항목이다.
-
-| Field        | Type       | Description |
-|--------------|------------|--------------|
-| `log_id`     | `Log.id`   | 참조 |
-| `position_at`| datetime   | 정렬 기준 시각 (`Log.created_at`) |
-
-Timeline 조회는 기간(예: "2026년 여름"), 장소, 사람, 타입 등으로 필터링할
-수 있어야 한다 ([PRD §5](./PRD.md#5-core-user-experience)).
-
----
-
-## 5. Vault
-
-Vault는 태그가 아니라 **폴더** 기반이다 ([PRD §4.4](./PRD.md#44-vault)).
-Log를 의미 단위로 다시 담아두는 사용자 주도 탐색 공간이며, MVP에서는
-자동 분류 정확도를 목표로 하지 않는다 ([PRD §11](./PRD.md#11-non-goals)).
-
-| Field        | Type          | Description |
-|--------------|---------------|--------------|
-| `id`         | ULID          | 고유 식별자 |
-| `name`       | string        | 폴더 이름 (예: "부산 여행", "2026년 여름") |
-| `parent_id`  | `Vault.id?`   | 상위 폴더 (계층 구조 허용, 없으면 최상위) |
-| `log_ids`    | `Log.id[]`    | 이 폴더에 담긴 Log 목록 (사용자가 직접 담거나, 시스템이 제안) |
-| `cover_ref`  | `MediaRef?`   | 대표 이미지 |
-| `updated_at` | datetime      | 마지막 갱신 시각 |
-
-하나의 Log는 여러 Vault 폴더에 동시에 속할 수 있다(예: "부산 여행" 폴더와
-"2026년 여름" 폴더에 같은 사진이 동시에 들어갈 수 있음) — 파일 시스템의
-심볼릭 링크와 유사한 개념으로 이해하면 된다.
-
----
-
-## 6. View (AI as Reader의 산출물)
-
-AI가 만드는 모든 결과—검색 결과, 요약, 추천, 자동 분류 제안, 그 밖의
-다양한 관점—는 `View`로 취급하며, **Log/Timeline/Vault 원본과 분리해서
-저장**한다 ([PRD §4.5](./PRD.md#45-ai-as-reader)).
-
-| Field         | Type       | Description |
-|---------------|------------|--------------|
-| `id`          | ULID       | 고유 식별자 |
-| `kind`        | string     | `summary` / `search_result` / `classification_suggestion` / ... |
-| `source_log_ids` | `Log.id[]` | 이 View를 생성하는 데 사용된 원본 Log |
-| `generated_by`| string     | 생성한 모델/로직 식별자 (재생성 가능성 추적용) |
-| `content`     | any        | View 본문 |
-| `generated_at`| datetime   | 생성 시각 |
-
-View는 캐시로 취급한다. 삭제되어도 `source_log_ids`로부터 언제든 다시
-생성할 수 있어야 하며, 어떤 View도 Log/Timeline/Vault의 원본 필드를
-직접 변경해서는 안 된다.
-
----
-
-## 7. Future Work: Event
-
-Event(Log를 시간·장소·맥락으로 자동 클러스터링한 상위 개념)는 MVP
-범위 밖이다 ([PRD §6 Future Work](./PRD.md#6-mvp-goal)). 설계 스케치는
-[EVENT_ENGINE.md](./EVENT_ENGINE.md)에 유지하되, 실제 구현은 Timeline +
-Vault 경험이 검증된 이후 진행한다. Event가 도입되더라도 원본 Log를
-변경하지 않는 파생 레이어로 설계한다는 원칙(§1)은 유지된다.
-
----
-
-## 8. Storage Layout (원칙 스케치)
-
-Human Readable First 원칙에 따라, DB(색인/캐시)와 별개로 파일시스템에도
-사람이 읽을 수 있는 형태로 미러링하는 것을 목표로 한다.
-
-```
-storage/
-├── logs/
-│   └── 2026/07/12/
-│       ├── <log_id>.json          # Log 메타데이터 + payload (사람이 읽을 수 있는 JSON)
-│       └── media/<log_id>.jpg     # 원본 미디어 (무손실)
-├── vaults/
-│   └── <vault_path>/              # 폴더 계층 그대로 (예: 부산 여행/)
-│       └── index.json             # 소속 log_id 목록
-└── views/
-    └── <view_kind>/<view_id>.json # AI가 생성한 파생 View (원본과 분리, 언제든 재생성 가능)
+```text
+Vault/
+  2026/
+    2026-07/
+      photos/
+        2026-07-12T19-30-22_01J...jpg
+      messages.md
+      metadata.json
 ```
 
-> 구체적인 파일 포맷/디렉토리 규칙은 아직 확정되지 않았다. 실제 구현 전
-> RFC로 논의한다.
+원칙:
+
+- `messages.md`는 사람이 읽기 쉬운 월별 대화 기록이다.
+- `metadata.json`은 Log ID, Message ID, MediaRef, EXIF, 해시, Timeline 정렬
+  정보를 포함하는 구조화된 원본 기록이다.
+- `photos/`는 원본 사진 파일을 무손실로 보존한다.
+- DB와 검색 인덱스는 이 구조에서 다시 만들 수 있어야 한다.
+- Auth 운영 데이터는 별도 보안 저장소에 보관한다. Export에 포함되더라도
+  토큰/초대 코드 원문은 절대 포함하지 않는다.
 
 ---
 
-## 9. Open Questions
+## 11. Search and Indexes
 
-- Metadata 자동 생성의 범위를 MVP에서 어디까지 구현할 것인가
-  (EXIF만 vs 텍스트 엔티티 추출까지)?
-- Vault 폴더를 시스템이 "제안"하는 기능을 MVP에 포함할 것인가, 완전히
-  수동으로 시작할 것인가? ([PRD §11](./PRD.md#11-non-goals)는 자동 분류
-  "정확도"를 목표하지 않는다고만 명시 — 제안 자체의 포함 여부는 열려 있음)
-- Export 포맷(백업/이전용)의 정확한 스펙은? ([PRD §9](./PRD.md#9-long-term-design-goals))
+검색은 MVP 필수 기능이지만, 검색 인덱스는 원본이 아니다.
 
-이 문서는 v0.2이며, 실제 구현 과정에서 ADR/RFC를 통해 갱신된다.
+허용되는 인덱스:
+
+- 메시지 전문 검색 인덱스
+- Timeline 정렬 인덱스
+- Photo Metadata 인덱스
+- GPS 존재 여부 / 기간 / 사용자 필터 인덱스
+
+모든 인덱스는 Markdown, JSON, 원본 사진 파일에서 재생성 가능해야 한다.
+
+---
+
+## 12. Future Work
+
+다음은 MVP에 포함하지 않는다.
+
+- Event Engine
+- AI 자동 분류
+- 여행/데이트 자동 생성
+- AI Memory
+- 다양한 AI View 자동 생성
+- GPS -> 장소명 변환
+- Location Alias
+- Schedule / Place / Gift / Note / Voice Log Type
+
+---
+
+## 13. Gate Review Checklist
+
+DATA_MODEL Review에서 확인할 항목:
+
+- [x] MVP Log Type이 `Message`, `Photo`로 제한되어 있다.
+- [x] Metadata가 "추출"만 하고 "해석"하지 않는다는 원칙이 명시되어 있다.
+- [x] Auth 엔터티 `User`, `InviteCode`, `Device`, `Session`이 포함되어 있다.
+- [x] 기기별 Session 폐기 모델이 표현되어 있다.
+- [x] 저장 구조 자체가 Export라는 원칙이 명시되어 있다.
+- [x] DB/Search Index가 파생 캐시임이 명시되어 있다.
+- [x] Location 원본 Metadata가 GPS 좌표까지만임이 명시되어 있다.
+- [x] Event Engine과 AI 자동 정리는 Future Work로 남아 있다.
+
+이 문서는 v0.3 Draft이며, Fable Gate Review와 CEO 최종 승인 전까지 확정본이
+아니다. 구현 중 세부 스키마가 바뀌면 RFC/ADR을 통해 갱신한다.

@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-02
-- Related: PRD §4.5 AI as Reader, §9 Long-term Design Goals, [DATA_MODEL.md §6 View](../DATA_MODEL.md#6-view-ai-as-reader의-산출물)
+- Related: PRD §4.5 AI as Reader, §9 Long-term Design Goals, [DATA_MODEL.md §8 View](../DATA_MODEL.md#8-view)
 
 ## Decision
 
