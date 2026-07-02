@@ -3,78 +3,57 @@
 - Date: 2026-07-03
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: Storage Layout RFC 0001 Final Review — Server Access Boundary Re-review
-- Status: Re-review Requested
+- Scope: Storage Layout RFC 0001 Accepted
+- Status: Complete — Fable Pass and CEO final approval recorded
 
-## Fable 5차 Conditional Pass Response
+## Review Outcome
 
-Fable reviewed commit `cd2b1fe` and gave Conditional Pass with one blocking condition.
-Codex addressed it in this revision.
+Fable 6차 Re-Review verdict: Pass.
 
-### C1. 서버 접근 통제 스탠스를 RFC에 기록할 것
+CEO final approval:
 
-Applied:
+- RFC 0001 -> Accepted
 
-- Added `docs/rfc/0001-storage-layout.md §9 Server Access Boundary`.
-- Recorded Server OS access decision:
-  - CEO is the only administrator OS account.
-  - Duri app runs as separate `duri` service user.
-  - `DuriStorage/` filesystem permissions allow only owner/service user and required
-    administrator account.
-  - Partner is an app user, not a server OS user.
-  - SSH is key-based only.
-  - Password login is disabled.
-  - Unnecessary OS accounts are not created.
-- Recorded encryption decision:
-  - Live `DuriStorage/` remains plaintext for MVP.
-  - Protection relies on home Mini PC physical control plus OS permissions.
-  - Backups that leave the Mini PC must be encrypted.
-- Recorded tradeoff:
-  - Physical theft of the Mini PC/live disk may expose plaintext data.
-  - MVP accepts this risk for operational simplicity, Human Readable recovery, and
-    fewer long-term key-loss failure modes.
-- Recorded revisit triggers:
-  - External carrying of `DuriStorage/` or backups.
-  - Cloud or third-party managed infrastructure migration.
-  - Changed physical theft threat model.
-- Added backup key-management requirement:
-  - Before encrypted external backup implementation, backup spec must decide key storage,
-    offline copy, and whether both users can access the key.
+Applied by Codex:
 
-## Changed Artifacts Since `cd2b1fe`
+- `docs/rfc/0001-storage-layout.md` status changed to `Accepted`.
+- `docs/rfc/README.md` index changed to `Accepted`.
+- `README.md` updated to show Design Gates Complete and Implementation Gate carryover.
+- `CHANGELOG.md` records the accepted RFC.
 
-- `docs/rfc/0001-storage-layout.md`
-- `README.md`
-- `CHANGELOG.md`
-- `agents_chatroom/codex-gate-review-request.md`
-- `agents_chatroom/fable-gate-review.md`
+## Finalized Architecture
 
-## Review Focus
+- PRD v0.2.5 — Preservation-first MVP: Message/Photo, Timeline, Search, Auth.
+- DATA_MODEL v0.4 — original/derived separation and Auth entities.
+- ADR-001 through ADR-008 — Accepted.
+- RFC 0001 — `DuriStorage/` storage/export layout, durable storage, and server access
+  boundary.
 
-Please verify:
+## Implementation Gate Carryover
 
-1. RFC 0001 now records the server access boundary required by Fable C1.
-2. The plaintext live storage decision is consistent with ADR-001 Human Readable First
-   and ADR-007 Storage is Export.
-3. OS account restrictions are sufficient for the two-person MVP.
-4. External backup encryption and key-management risk are recorded without prematurely
-   finalizing the backup spec.
-5. RFC 0001 can proceed to CEO final approval for `Accepted` status.
+Implementation may begin from the accepted architecture.
 
-## Non-Final Boundary
+The following implementation result areas remain Gate 대상:
 
-RFC 0001 remains Draft until Fable review and CEO final approval.
+- Original-data write paths
+- Backup/Export code
+- Auth code
+- Device/session code
 
-This request does not authorize implementation of original-data write paths,
-backup/export, auth, or device/session code.
+Fable carryover checks:
+
+- N1: orphan media recovery rule.
+- N2: monthly partition write serialization.
+- N3: backup spec, including schedule, restore tests, storage location, encryption, and
+  key management.
+- Server hardening applied in practice: OS accounts, SSH, filesystem permissions.
 
 ## Verification
 
 Codex ran:
 
-- `rg` checks for Server Access Boundary, plaintext storage, OS account policy, external
-  backup encryption, and backup key-management wording.
-  - RFC 0001 contains the new `Server Access Boundary` section.
-  - RFC 0001 still has `Status: Draft`, as intended.
+- `rg` checks for stale RFC 0001 Draft / Gate Review Requested status.
+  - Remaining Draft references are historical CHANGELOG/template text or "Draft 작성"
+    completion criteria.
 - `git diff --check`.
-- Manual README and RFC status review.
+- Manual README, RFC, and RFC index review.

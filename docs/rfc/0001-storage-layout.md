@@ -1,6 +1,6 @@
 # 0001. Storage Layout RFC
 
-- Status: Draft
+- Status: Accepted
 - Date: 2026-07-02
 - Updated: 2026-07-03
 - Related: PRD v0.2.5, DATA_MODEL v0.4, ADR-001, ADR-007, ADR-008
@@ -13,7 +13,7 @@ Duri의 Export v1 저장 구조를 `DuriStorage/` 아래에 두고, Timeline 월
 MVP는 월 단위 `metadata.json`을 유지하고, `DuriStorage/`를 ephemeral filesystem이
 아닌 영구 디스크/볼륨에 저장한다.
 
-이 RFC는 Fable Gate Review와 CEO final approval 전까지 Draft다.
+이 RFC는 Fable Gate Review와 CEO final approval을 거쳐 Accepted로 확정됐다.
 
 ## Motivation
 
@@ -373,7 +373,8 @@ Future Work if size or performance problems appear.
 
 ## Gate Notes
 
-This RFC is Draft. It may be edited freely until it is proposed for acceptance.
+This RFC is Accepted.
 
-Before implementation touches original-data write paths, backup/export, auth, or
-device/session code, this RFC or a successor must pass Fable Gate Review and CEO approval.
+Implementation may now begin from this storage/export architecture. However,
+implementation results that touch original-data write paths, backup/export, auth, or
+device/session code remain Gate 대상 and must pass Fable review before they are finalized.

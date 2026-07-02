@@ -6,6 +6,25 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Storage Layout RFC 0001 Accepted — 2026-07-03
+
+Fable 6차 Re-Review Pass와 CEO 최종 승인 반영.
+
+### Changed
+
+- RFC 0001 Status를 `Accepted`로 전환
+- README를 Design Gates Complete / Implementation Gate 기준으로 갱신
+- RFC index에서 RFC 0001 상태를 `Accepted`로 갱신
+
+### Implementation Gate Carryover
+
+- N1: orphan media 복구 규칙
+- N2: 월 파티션 단위 쓰기 직렬화
+- N3: 백업 스펙(주기, 복원 테스트, 보관 위치, 암호화 키 관리)
+- 서버 하드닝 실적용 확인(계정, SSH, 권한)
+
+---
+
 ## Storage Layout RFC 0001 C1 Re-review Request — 2026-07-03
 
 Fable 5차 Conditional Pass 조건(C1)과 CEO Decision: Server Access Control 반영.

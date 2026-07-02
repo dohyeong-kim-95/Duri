@@ -5,6 +5,53 @@
 
 ---
 
+# CEO 최종 승인 — 2026-07-03 (Storage Layout RFC 0001)
+
+CEO가 6차 심사(Pass) 결과를 확인하고 **RFC 0001 → Accepted 전환을 승인**했다.
+
+- 저장/Export 포맷 확정: `DuriStorage/` 구조, 월 단위 `metadata.json`
+  canonical, 영속 볼륨 요구, Server Access Boundary(§9) 포함.
+- Codex는 RFC 0001의 Status를 Accepted로 전환하고, README/CHANGELOG에
+  반영할 수 있다.
+- 이 승인으로 **구현 착수가 가능**해진다. 단 원본 쓰기 경로·백업/Export·
+  인증·기기/세션 코드는 Gate 대상 ⑤ — 구현 결과물은 Fable 심사를 거친다.
+- 구현 Gate 이월 확인 항목: N1(orphan media 복구), N2(쓰기 직렬화),
+  N3(백업 스펙 + 키 관리), §9 서버 하드닝 실적용 여부.
+
+---
+
+# 6차 심사 (Re-Review) — 2026-07-03, commit `49d910d`
+
+- Scope: RFC 0001 §9 Server Access Boundary 반영 확인 (5차 심사 C1 해소)
+
+## Verdict: 통과 (Pass) — CEO 최종 승인 대기
+
+RFC 0001 §9가 CEO의 Server Access Control 결정을 완전하게 기록했다.
+
+- **접근 통제** ✓ — 관리 계정 CEO 1개, `duri` service user 분리,
+  `DuriStorage/` 권한 최소화, 파트너는 앱 사용자, key-based SSH만 허용,
+  password login 비활성화, 불필요 계정 금지. CEO 결정 원문과 일치.
+- **암호화 스탠스** ✓ — live `DuriStorage/`는 평문(ADR-001/007 근거 명시),
+  외부 반출 백업은 암호화 의무. 트레이드오프(물리 도난 시 노출 감수)와
+  재검토 트리거 3건(외부 반출 상시화, 클라우드 이전, 위협 모델 변화)이
+  결정과 함께 기록됐다 — 결정의 유효 조건이 명시된 좋은 형태다.
+- **N3-a 흡수** ✓ — "키 분실이 유일한 백업을 잃는 현실적 경로가 되어서는
+  안 된다"는 요구가 RFC 본문에 명시됐고, 키 보관·오프라인 사본·두 사용자
+  접근 가능 여부를 백업 스펙의 필수 결정 항목으로 지정했다.
+
+기존 §9(내구성/쓰기 무결성)는 §10으로 재번호. 잔여 조건 없음.
+
+## CEO 승인 후 진행 가능 항목
+
+1. RFC 0001 → **Accepted** (저장/Export 포맷 확정)
+2. 이후 구현 착수 가능. 단, 원본 쓰기 경로·백업/Export·인증·기기/세션
+   **코드**는 Gate 대상 ⑤이므로 구현 결과물이 다시 Fable 심사를 거친다.
+3. 구현 Gate에서 확인할 이월 항목: N1(orphan media 복구), N2(쓰기 직렬화),
+   N3(백업 스펙: 주기·복원 테스트·오프사이트·키 관리), 서버 하드닝 실적용
+   (§9의 SSH/계정/권한 설정이 실제 배포 서버에 적용됐는지).
+
+---
+
 # 5차 심사 — 2026-07-03, commit `cd2b1fe` (Storage Layout RFC 0001 Final Review)
 
 - Scope: RFC 0001 Accepted 전환 심사 (저장/Export 포맷 확정 — Gate 대상 ④)
