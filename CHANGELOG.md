@@ -6,6 +6,23 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## CI Baseline — 2026-07-03
+
+구현 단계 Gate 구조와 "CI 구성 1순위" 원칙 반영.
+
+### Added
+
+- GitHub Actions CI 추가: 모든 push/PR에서 `scripts/ci.sh` 실행
+- Markdown 로컬 링크 검사 스크립트 추가
+- `.omx/` 로컬 에이전트 런타임 상태를 ignore 처리
+
+### Changed
+
+- README Next Gate에 CI 기준선과 Gate Acceptance Spec 테스트 연결 방식을 명시
+- `00-gatekeeping-principles.md`의 구현 단계 TDD Gate 구조를 반영
+
+---
+
 ## Storage Layout RFC 0001 Accepted — 2026-07-03
 
 Fable 6차 Re-Review Pass와 CEO 최종 승인 반영.

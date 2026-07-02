@@ -17,6 +17,9 @@ Thumbs.db
 *.log
 logs/
 
+# Local agent/runtime state
+.omx/
+
 # Node
 node_modules/
 dist/

@@ -73,6 +73,10 @@ Accepted storage RFC: [docs/rfc/0001-storage-layout.md](docs/rfc/0001-storage-la
 
 설계 Gate는 닫혔다. 구현 착수는 가능하다.
 
+CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 push/PR에서
+공백 검사와 Markdown 로컬 링크 검사를 실행한다. Fable Gate Acceptance Spec이
+도착하면 해당 테스트를 이 CI에 추가한 뒤 Gate review를 요청한다.
+
 다만 원본 쓰기 경로, 백업/Export, 인증/기기/세션 코드는 Gate 대상이다.
 구현 결과물은 Fable 심사를 거친다.
 
