@@ -24,6 +24,7 @@
 
 - ADR-006: Raw GPS Location Metadata
 - ADR-007: Storage is Export
+- ADR-008: Preservation-first MVP — VaultFolder Curation is Future Work
 
 ---
 
@@ -371,13 +372,18 @@ DuriStorage/
 
 - `metadata.json`은 canonical source다. Log ID, Message ID, Message text,
   MediaRef, EXIF, 해시, Timeline 정렬 정보를 포함하는 구조화된 원본 기록이다.
+- `metadata.json`은 사람이 Export를 읽을 수 있도록 Log 참여자의 표시 정체성
+  맵을 포함한다. 예: `participants: { actor_id -> display_name }`.
 - `messages.md`는 사람이 읽기 쉬운 월별 대화 기록이며, `metadata.json`에서
-  재생성 가능한 파생 파일이다. 두 파일이 충돌하면 `metadata.json`이 우선한다.
+  재생성 가능한 파생 파일이다. 발화자 이름은 `participants` 맵에서 렌더링한다.
+  두 파일이 충돌하면 `metadata.json`이 우선한다.
 - `photos/`는 원본 사진 파일을 무손실로 보존한다.
 - DB와 검색 인덱스는 이 구조에서 다시 만들 수 있어야 한다.
-- Auth 운영 데이터(`InviteCode`, `Session`, token hash 포함)는 Export에서
-  전면 제외하고 별도 보안 저장소에 보관한다. `User`/`Device` 표시 목록,
-  기기 라벨, 폐기 상태 요약도 Export에 포함하지 않는다.
+- Auth 운영 데이터(`InviteCode`, `Session`, token hash, device fingerprint,
+  기기 라벨, 폐기 상태 요약 포함)는 Export에서 전면 제외하고 별도 보안
+  저장소에 보관한다.
+- 단, 추억 데이터의 표시 정체성은 Auth 운영 데이터가 아니다. Message와 Photo의
+  `actor_id`를 사람이 읽을 수 있도록 `display_name`을 Export에 포함한다.
 
 ---
 

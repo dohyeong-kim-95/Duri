@@ -3,7 +3,7 @@
 - Status: Draft
 - Date: 2026-07-02
 - Updated: 2026-07-03
-- Related: PRD v0.2.5 Draft, DATA_MODEL v0.4 Draft, ADR-001, ADR-007
+- Related: PRD v0.2.5 Draft, DATA_MODEL v0.4 Draft, ADR-001, ADR-007, ADR-008
 
 ## Summary
 
@@ -91,13 +91,21 @@ Shape:
   "schema_version": 1,
   "period": "2026-07",
   "timezone": "Asia/Seoul",
+  "participants": {
+    "01J_USER_1": {
+      "display_name": "Dohyeong"
+    },
+    "01J_USER_2": {
+      "display_name": "Partner"
+    }
+  },
   "logs": [
     {
       "id": "01J...",
       "type": "Message",
       "created_at": "2026-07-12T19:28:00+09:00",
       "ingested_at": "2026-07-12T19:28:01+09:00",
-      "actor_id": "01J_USER...",
+      "actor_id": "01J_USER_1",
       "source": "chat",
       "payload": {
         "message_id": "01J_MSG...",
@@ -113,6 +121,8 @@ Shape:
 Rules:
 
 - Message `text` is canonical in `metadata.json`.
+- `participants` stores display identity needed to read memory data. It is not an auth
+  session or device export.
 - `messages.md` is generated from `metadata.json`.
 - Original photos live under `photos/`, and `metadata.json` stores their `MediaRef`.
 - DB/search indexes must be rebuildable from `metadata.json` and original media files.
@@ -176,7 +186,7 @@ Rules:
 - They must be regenerable from Timeline metadata.
 - They are never treated as user curation.
 
-### 8. Auth Export Boundary
+### 8. Auth Export Boundary and Display Identity
 
 Auth operating data is excluded from `DuriStorage/`.
 
@@ -186,17 +196,19 @@ Excluded:
 - Refresh Session hashes
 - Access tokens
 - Device fingerprint hashes
-
-Also excluded:
-
-- User display names
 - Device labels
 - Revocation status summaries
+
+Required memory display data:
+
+- Participant display names for actors referenced by exported Logs
 
 Rule:
 
 - Export authorization happens before export creation.
 - `DuriStorage/` does not contain login/session/device audit data.
+- Participant display names are memory display identity, not auth operating data.
+- `messages.md` may render participant names from `metadata.json.participants`.
 - It is enough that the export action is allowed only for one of the two registered users.
 
 ### 9. Write Integrity Strategy

@@ -3,18 +3,56 @@
 - Date: 2026-07-03
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: VaultFolder Future Work de-scope / PRD v0.2.5 Draft / DATA_MODEL v0.4 Draft / WORKFLOW v0.4 Draft / Storage Layout RFC 0001 Draft
-- Status: Review Requested
+- Scope: Re-review for VaultFolder Future Work de-scope / ADR-008 Proposed / DATA_MODEL v0.4 Draft / Storage Layout RFC 0001 Draft
+- Status: Re-review Requested
 
-## Why This Needs Gate Review
+## Fable 3차 Conditional Pass Response
 
-`00-gatekeeping-principles.md` requires Fable review before finalizing PRD meaning
-changes, MVP scope changes, data model changes, and storage/export format decisions.
+Fable reviewed commit `fbb81fb` and gave Conditional Pass with two blocking conditions.
+Codex addressed both in this revision.
 
-This update changes the MVP boundary:
+### C1. ADR-002를 제자리 수정하지 말고 새 ADR로 기록할 것
 
-- Before: VaultFolder Curation was treated as MVP.
-- Now: VaultFolder Curation is Future Work.
+Applied:
+
+- Added `docs/adr/ADR-008-preservation-first-mvp-vaultfolder-future-work.md`.
+  - Status: `Proposed`
+  - Records CEO Decision: VaultFolder Curation is Future Work.
+  - Records MVP scope: Message Log, Photo Log, Timeline, Deterministic Metadata, Search,
+    Storage-as-Export, Auth.
+  - Records rejected alternatives: keep manual curation in MVP, pre-create `vault/folders/`,
+    include AI curation in MVP.
+- Updated `docs/adr/ADR-002-timeline-first.md`.
+  - Restored original Decision 3 wording.
+  - Marked Decision 3 as superseded by ADR-008.
+  - Kept minor 2026-07-03 amendment for "Timeline + Vault" wording in Decision 4.
+  - Restored original Consequences wording and annotated VaultFolder-related consequence
+    as superseded by ADR-008.
+- Updated `docs/adr/README.md`.
+  - Added ADR-008 to the ADR index.
+- Updated `README.md`.
+  - Added ADR-008 to the CEO Dashboard decision table as `Proposed`.
+
+### C2. Export 표시 이름 제외 규칙과 Human Readable First 모순
+
+Applied:
+
+- Updated `docs/DATA_MODEL.md §10`.
+  - Auth operating data remains excluded from Export:
+    `InviteCode`, `Session`, token hashes, device fingerprint, device labels, revocation
+    summaries.
+  - Memory display identity is now explicitly separate from auth operating data.
+  - `metadata.json` includes `participants: { actor_id -> display_name }` so humans can
+    understand who spoke in exported memories.
+  - `messages.md` renders names from `metadata.json.participants`.
+- Updated `docs/rfc/0001-storage-layout.md`.
+  - Added `participants` map to the canonical monthly `metadata.json` example.
+  - Renamed boundary section to `Auth Export Boundary and Display Identity`.
+  - Removed `User display names` from excluded auth operating data.
+  - Required participant display names for actors referenced by exported Logs.
+- Updated `README.md`.
+  - Next Gate now says auth/user/device operating information is excluded, but message
+    participant display names are included as memory data.
 
 ## CEO Decision Applied
 
@@ -29,73 +67,31 @@ CEO Decision — VaultFolder is Future Work:
   - Storage-as-Export
   - Auth
 - MVP excludes VaultFolder Curation.
-- VaultFolder is a future feature where users manually create memory folders or AI
-  suggests curation.
 - MVP goal is preservation, not curation:
   - "채팅과 사진을 잃지 않고 시간순으로 보존하는 것"
 
-## Changed Artifacts
+## Changed Artifacts Since `fbb81fb`
 
-- `README.md`
-  - Removed `Manual VaultFolder Curation` from Current MVP.
-  - Updated Core Concept to:
-    - `Timeline -> View/Index`
-    - Future Work: `VaultFolder`, `AI View`
-  - Updated Next Gate bullets to remove VaultFolder export design from MVP scope.
-
-- `docs/PRD.md`
-  - Bumped to `v0.2.5 Draft`.
-  - Replaced PRD §4.4 with "Search Now, Vault Later".
-  - MVP exploration is now Timeline + Deterministic Metadata + Search.
-  - VaultFolder, Location Alias, AI summary/recommendation/classification are Future Work.
-
-- `docs/DATA_MODEL.md`
-  - Bumped to `v0.4 Draft`.
-  - Moved `VaultFolder` from MVP entity to Future Work entity.
-  - Removed `Log -> VaultFolder` MVP relationship.
-  - Replaced `VaultFolder and Metadata Exploration` section with `Search and Metadata Exploration`.
-  - Added Future Work section for VaultFolder principles.
-  - Confirmed Auth/User/Device operating data is excluded from Export.
-
-- `docs/WORKFLOW.md`
-  - Bumped to `v0.4 Draft`.
-  - Reframed MVP workflow as Log -> Timeline -> Search.
-  - Removed "user puts items into VaultFolder" from MVP path.
-
-- `docs/rfc/0001-storage-layout.md`
-  - Kept status as Draft.
-  - Removed `vault/folders/` from proposed MVP layout.
-  - Removed VaultFolder Export question.
-  - Added rejection rationale for including VaultFolder Curation in MVP storage.
-
+- `docs/adr/ADR-008-preservation-first-mvp-vaultfolder-future-work.md`
 - `docs/adr/ADR-002-timeline-first.md`
-  - Added 2026-07-03 amendment note.
-  - Kept Timeline First decision.
-  - Corrected the older "Vault starts in MVP" clause to match the new CEO decision.
-
-- `docs/EVENT_ENGINE.md`
-  - Updated Future Work wording from "Timeline + Vault" to "Timeline 보존 + Search".
-  - Updated broken links caused by PRD/DATA_MODEL section heading changes.
-
+- `docs/adr/README.md`
+- `docs/DATA_MODEL.md`
+- `docs/rfc/0001-storage-layout.md`
+- `README.md`
 - `CHANGELOG.md`
-  - Recorded this as `PRD v0.2.5 Draft / DATA_MODEL v0.4 Draft`.
+- `agents_chatroom/codex-gate-review-request.md`
 
-## Fable Review Focus
+## Re-review Focus
 
-Please review:
+Please verify:
 
-1. Whether VaultFolder is fully removed from MVP scope across README, PRD, DATA_MODEL,
-   WORKFLOW, RFC, ADR-002, and EVENT_ENGINE.
-2. Whether the new MVP boundary still satisfies:
-   - Human Readable First
-   - Timeline First
-   - AI as Reader
-   - Storage-as-Export
-3. Whether amending ADR-002 is acceptable, or whether this should instead become a new
-   ADR that supersedes part of ADR-002.
-4. Whether PRD v0.2.5 Draft and DATA_MODEL v0.4 Draft can proceed toward CEO final
-   approval after review.
-5. Whether Storage Layout RFC 0001 remains a valid Draft for the next Phase 3 Gate.
+1. C1 is satisfied: ADR-008 records the new decision, ADR-002 preserves history, and the
+   ADR index exposes the new decision.
+2. C2 is satisfied: auth operating data remains excluded from Export, while participant
+   display identity is included as memory data for Human Readable First.
+3. ADR-008 can remain `Proposed` until Fable pass + CEO final approval.
+4. PRD v0.2.5 Draft, DATA_MODEL v0.4 Draft, and RFC 0001 Draft can proceed toward CEO
+   final approval after re-review.
 
 ## Current Open Technical Questions
 
@@ -110,9 +106,11 @@ These remain intentionally open in Storage Layout RFC 0001:
 
 Codex ran:
 
-- `rg` checks for stale MVP VaultFolder/Vault wording.
-  - Remaining matches are in historical CHANGELOG entries, this review request, or explicit
-    "MVP excludes / Future Work" wording.
+- `rg` checks for stale ADR-002 overwrite, auth display-name contradiction, and
+  `vault/folders` MVP storage wording.
+  - Remaining `vault/folders` matches are rejection/removal context only.
+  - Remaining `User display names` match is this response note saying it was removed
+    from the excluded auth operating data list.
 - Markdown diff review.
 - `git diff --check`.
 
@@ -121,4 +119,4 @@ Codex ran:
 This request does not authorize implementation of original-data write paths, backup/export,
 auth, or device/session code.
 
-No ADR is being newly accepted in this change. Storage Layout RFC 0001 remains Draft.
+ADR-008 is not marked `Accepted` yet. Storage Layout RFC 0001 remains Draft.

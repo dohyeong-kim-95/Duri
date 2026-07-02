@@ -5,6 +5,88 @@
 
 ---
 
+# 3차 심사 — 2026-07-03, commit `fbb81fb` (VaultFolder De-scope)
+
+- Scope: PRD v0.2.5 Draft / DATA_MODEL v0.4 Draft / WORKFLOW v0.4 Draft /
+  ADR-002 Amendment / Storage Layout RFC 0001 Draft
+
+## Verdict: 조건부 통과 (Conditional Pass)
+
+CEO 결정(VaultFolder Curation을 Future Work로 이동, 보존 우선 MVP)의 문서
+반영 자체는 정확하고 일관적이다. MVP 경계 축소이므로 Future Work의 MVP 승격
+같은 위반은 있을 수 없고, 오히려 First Principle(«오래 보존하고 똑똑하게
+읽는다»)에 더 가까워졌다. 단, 확정 전 아래 2건을 해소해야 한다.
+
+## Conditions (확정 전 해소 필수)
+
+### C1. ADR-002를 제자리 수정하지 말고 새 ADR로 기록할 것 (Major)
+
+commit `fbb81fb`가 Accepted 상태인 ADR-002의 Decision 3항
+("Vault는 사람이 관리하는 폴더 구조로 MVP를 시작한다")을 정반대 내용
+("MVP에서 VaultFolder Curation은 제외한다")으로 **제자리에서 덮어썼다**.
+
+ADR은 "이미 내려진 결정"의 불변 기록이며, ADR README 규칙도 상태 변경 시
+삭제/수정이 아니라 `Superseded by ADR-NNN` 표시를 요구한다. 지금 방식은
+git을 뒤지지 않으면 "언제 무엇이 결정됐는지"를 알 수 없게 만들고, ADR
+인덱스에 이번 CEO 결정이 전혀 드러나지 않는다. 이번 결정은 MVP 경계를
+바꾸는 실질적 결정이므로 원장에 1급 항목으로 남아야 한다.
+
+**요구**: (a) 새 ADR-008 "Preservation-first MVP: VaultFolder Curation은
+Future Work" (CEO Decision)을 작성해 이번 결정·배경·대안을 기록. (b)
+ADR-002의 Decision 3항은 원문을 복원하되 "→ ADR-008로 대체됨" 표시를
+남기는 방식으로 수정 (4항의 'Timeline + Vault' 문구 조정은 경미하므로
+Amended 주석 유지 가능). (c) ADR 인덱스에 ADR-008 추가.
+
+### C2. Export의 표시 이름 제외 규칙이 Human Readable First와 모순 (Major)
+
+DATA_MODEL v0.4 §10은 "`User`/`Device` 표시 목록, 기기 라벨, 폐기 상태
+요약도 Export에 포함하지 않는다"고 정했다. 그런데 Export 안의
+`messages.md`(RFC 0001 §5 예시)는 "19:28 — Dohyeong"처럼 **발화자 이름을
+렌더링**하고, canonical `metadata.json`은 `actor_id` ULID만 저장한다.
+
+이 규칙을 엄격히 따르면 50년 뒤 아카이브에는 발화자가 ULID로만 남아
+Human Readable First(ADR-001)가 사실상 깨지고, 이름을 렌더링하면 §10을
+위반한다. 규칙 자체가 자기모순이다.
+
+**요구**: "Auth **운영** 데이터(Session, InviteCode, fingerprint, 기기
+기록, 폐기 상태)"와 "추억 데이터의 **표시 정체성**(누가 말했는가)"을
+구분할 것. 후자는 추억 데이터의 일부로 Export에 포함되어야 한다 (예:
+`metadata.json`에 `participants: {actor_id → display_name}` 맵 포함,
+`messages.md`에 이름 렌더링 허용). DATA_MODEL §10 문구를 이 구분으로
+수정하고, RFC 0001 §8의 동일 규칙은 RFC Gate에서 정합화하라.
+
+## Codex Review Questions 답변
+
+1. **VaultFolder가 MVP 범위에서 완전히 제거됐는가?** — 그렇다. README /
+   PRD / DATA_MODEL / WORKFLOW / RFC / EVENT_ENGINE 전체에서 확인했다.
+   잔여 언급 2곳(ADR-003 Alternatives의 Vault, WORKFLOW §2의 Vault 제안
+   흐름)은 각각 과거 기록·Future Work 스케치 맥락이라 문제없다.
+2. **새 MVP 경계가 4원칙을 만족하는가?** — 만족한다. 보존 우선 축소는
+   First Principle과 Timeline First를 강화하는 방향이다. 단 C2의
+   표시 이름 모순이 Human Readable First에 걸린다.
+3. **ADR-002 amendment 방식이 적절한가?** — 부적절하다. C1 참조 —
+   부분 supersede + 신규 ADR-008이 맞는 방식이다.
+4. **PRD v0.2.5 / DATA_MODEL v0.4가 CEO 승인으로 갈 수 있는가?** —
+   C1, C2 해소 후 가능하다.
+5. **RFC 0001이 유효한 Draft인가?** — 그렇다. 품질이 좋다: 원자적 쓰기
+   전략, `created_at` 기준 파티션 근거, 파일별 timezone 기록, 루트 이름
+   `DuriStorage/` 결정 근거 모두 타당하다. 2인 MVP에서 월 단위
+   `metadata.json` 전체 재작성도 수용 가능하다. 단 Accepted 제안 전에
+   C2 정합화와 Open Questions 2건 해소가 필요하다.
+
+## Non-blocking Notes
+
+- PRD §4.4가 미래 VaultFolder를 "`log_id` 참조 **또는** View"로 열어뒀다.
+  v0.3 Gate에서 "사용자 큐레이션 = 원본"으로 정리했던 결론이 있으므로,
+  Future Work 재도입 시점에 그 결론부터 재검토할 것 (DATA_MODEL §12.1이
+  이를 예고하고 있어 지금은 문제없음).
+- 프로세스 준수 확인: `521c327` 확정 커밋은 CEO 승인 범위와 정확히
+  일치했고, RFC 관련 커밋들(`e3e84bb`, `7a80696`)은 Draft 유지 + CEO
+  결정 반영으로 자율 범위 안이었다. 이번 de-scope도 확정 전 review 요청
+  절차를 지켰다.
+
+---
+
 # CEO 최종 승인 — 2026-07-02
 
 CEO가 PRD v0.2.4 / DATA_MODEL v0.3 / WORKFLOW v0.3 Draft 해제와

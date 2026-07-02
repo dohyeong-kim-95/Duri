@@ -6,6 +6,24 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Gate Re-review Request Update — 2026-07-03
+
+Fable 3차 Conditional Pass 조건(C1, C2) 반영.
+
+### Added
+
+- **ADR-008 Proposed** — Preservation-first MVP: VaultFolder Curation is Future Work
+
+### Changed
+
+- ADR-002 Decision 3을 원문 복원 후 ADR-008로 supersede 표시
+- Auth 운영 데이터와 추억 표시 정체성을 분리
+- `metadata.json`에 `participants: { actor_id -> display_name }` 맵을 포함하도록 DATA_MODEL/RFC 정합화
+- `messages.md`가 `metadata.json.participants`에서 발화자 이름을 렌더링하도록 명시
+- `codex-gate-review-request.md`를 C1/C2 대응 완료 재심사 요청으로 갱신
+
+---
+
 ## PRD v0.2.5 Draft / DATA_MODEL v0.4 Draft — 2026-07-03
 
 CEO Decision: VaultFolder is Future Work 반영.

@@ -47,6 +47,7 @@ https://duri.bubblelab.dev
 | ADR-005 | Invite-code based two-person authentication (CEO Decision #005) | [docs/adr/ADR-005](docs/adr/ADR-005-invite-code-two-person-auth.md) |
 | ADR-006 | Raw GPS Location Metadata (CEO Decision #006) | [docs/adr/ADR-006](docs/adr/ADR-006-raw-gps-location-metadata.md) |
 | ADR-007 | Storage is Export (CEO Decision #007) | [docs/adr/ADR-007](docs/adr/ADR-007-storage-is-export.md) |
+| ADR-008 | Preservation-first MVP: VaultFolder is Future Work (Proposed) | [docs/adr/ADR-008](docs/adr/ADR-008-preservation-first-mvp-vaultfolder-future-work.md) |
 
 ### Next Phase
 
@@ -61,8 +62,8 @@ Phase 3 — Storage Layout RFC
 5. Authentication은 Self-hosted JWT + Invite Code + 기기별 Refresh Session으로 설계한다.
 6. 위치 Metadata는 사진 EXIF의 GPS 좌표만 원본으로 저장한다. 장소명/Alias는 Future Work의 View다.
 
-기록 방식: 1, 2, 3, 5는 `DATA_MODEL.md` v0.4 Draft Gate Review 범위에
-묶고, 4는 ADR-007, 6은 ADR-006으로 기록한다.
+기록 방식: 1, 2, 5는 `DATA_MODEL.md` v0.4 Draft Gate Review 범위에 묶고,
+3은 ADR-008 Proposed, 4는 ADR-007, 6은 ADR-006으로 기록한다.
 
 ### Next Gate
 
@@ -76,6 +77,7 @@ Current draft: [docs/rfc/0001-storage-layout.md](docs/rfc/0001-storage-layout.md
 - MVP Storage Layout에서 VaultFolder Curation 제외
 - 파일명 규칙, 월/일 분할 기준, `metadata.json` 쓰기 무결성 전략
 - Auth/User/Device 운영 정보는 Export에서 제외
+- 메시지 발화자 표시 이름은 추억 데이터로 Export에 포함
 
 ---
 
@@ -137,5 +139,6 @@ Timeline 보존 경험이 검증된 이후의 Future Work다.
 
 - [x] Storage Layout RFC Draft 작성
 - [x] CEO Decision: VaultFolder is Future Work 수령
+- [x] ADR-008 Proposed 작성
 - [ ] Fable VaultFolder De-scope / Storage Layout Review
 - [ ] CEO final approval
