@@ -3,12 +3,12 @@
 - Status: Draft
 - Date: 2026-07-02
 - Updated: 2026-07-03
-- Related: PRD v0.2.4, DATA_MODEL v0.3, ADR-001, ADR-007
+- Related: PRD v0.2.5 Draft, DATA_MODEL v0.4 Draft, ADR-001, ADR-007
 
 ## Summary
 
 Duri의 Export v1 저장 구조를 `DuriStorage/` 아래에 두고, Timeline 월별 원본
-묶음과 VaultFolder 사용자 큐레이션을 분리한다.
+묶음과 재생성 가능한 Index/View를 분리한다.
 
 이 RFC는 구현 전 논의 초안이다. Accepted 전까지 파일명 규칙, 디렉토리 규칙,
 쓰기 무결성 전략은 확정되지 않는다.
@@ -18,9 +18,8 @@ Duri의 Export v1 저장 구조를 `DuriStorage/` 아래에 두고, Timeline 월
 ADR-007은 "저장 구조 자체가 Export"라고 결정했다. 따라서 구현 전에 다음을
 정해야 한다.
 
-- `Vault/`라는 루트 이름과 `VaultFolder` 엔터티의 용어 충돌 해소
+- Export 루트 이름 확정
 - Message/Photo 원본의 canonical 위치
-- VaultFolder 큐레이션을 Export에서 사람이 읽을 수 있게 표현하는 방식
 - 파일명 규칙과 월/일 분할 기준
 - `metadata.json` 쓰기 무결성 전략
 
@@ -35,9 +34,8 @@ Export 루트는 `Vault/`가 아니라 `DuriStorage/`로 한다.
 
 이유:
 
-- `VaultFolder`는 사용자가 직접 만든 큐레이션 엔터티다.
-- Export 전체 루트를 `Vault/`라고 부르면 Timeline 원본 아카이브와 사용자
-  VaultFolder가 섞여 보인다.
+- MVP에서 VaultFolder Curation은 Future Work다.
+- Export 전체 루트를 `Vault/`라고 부르면 MVP 저장소가 큐레이션 폴더처럼 보인다.
 - `DuriStorage/`는 사용자가 파일 탐색기로 열었을 때 "Duri의 원본 저장소"라는
   의미가 명확하다.
 
@@ -52,11 +50,6 @@ DuriStorage/
         messages.md
         photos/
           2026-07-12T19-30-22_01J...jpg
-  vault/
-    folders/
-      01J.../
-        folder.json
-        index.md
   indexes/
     README.md
   system/
@@ -66,7 +59,6 @@ DuriStorage/
 Directory roles:
 
 - `timeline/`: canonical Log archive. `metadata.json` and original photos live here.
-- `vault/folders/`: user-created VaultFolder curation. It references Log IDs, not duplicate media.
 - `indexes/`: rebuildable search/timeline helper files. These are not canonical.
 - `system/`: operational notes for humans. Auth secrets and token/session hashes are not exported.
 
@@ -166,53 +158,9 @@ Rules:
 - Original extension is preserved when safe; otherwise MIME type determines extension.
 - Original filename is stored in `MediaRef.original_filename`.
 
-### 7. VaultFolder Export
+### 7. Metadata Exploration Views
 
-VaultFolder curation is exported as references, not duplicated media.
-
-Example:
-
-```text
-vault/
-  folders/
-    01J_VAULT_BUSAN/
-      folder.json
-      index.md
-```
-
-`folder.json`:
-
-```json
-{
-  "id": "01J_VAULT_BUSAN",
-  "name": "부산 여행",
-  "path": "여행/부산 여행",
-  "parent_id": null,
-  "log_ids": ["01J_LOG_1", "01J_LOG_2"],
-  "cover_ref": "01J_MEDIA_1",
-  "updated_at": "2026-07-12T20:00:00+09:00"
-}
-```
-
-`index.md` is a human-readable generated view:
-
-```markdown
-# 부산 여행
-
-- 2026-07-12 19:30 — Photo — `01J_LOG_1`
-- 2026-07-12 19:32 — Message — `01J_LOG_2`
-```
-
-Rules:
-
-- VaultFolder stores curated `log_ids` only.
-- It does not store metadata filters or search results.
-- It does not duplicate original photos.
-- If a user wants a portable folder of copied photos later, that is a separate generated Export View.
-
-### 8. Metadata Exploration Views
-
-Metadata-based search results are stored outside canonical VaultFolder data.
+Metadata-based search results are stored outside canonical Timeline data.
 
 Optional generated location:
 
@@ -228,7 +176,7 @@ Rules:
 - They must be regenerable from Timeline metadata.
 - They are never treated as user curation.
 
-### 9. Auth Export Boundary
+### 8. Auth Export Boundary
 
 Auth operating data is excluded from `DuriStorage/`.
 
@@ -251,7 +199,7 @@ Rule:
 - `DuriStorage/` does not contain login/session/device audit data.
 - It is enough that the export action is allowed only for one of the two registered users.
 
-### 10. Write Integrity Strategy
+### 9. Write Integrity Strategy
 
 MVP write strategy:
 
@@ -282,20 +230,22 @@ Pros:
 
 Cons:
 
-- Confuses the archive root with `VaultFolder`.
-- Makes Timeline-originated records look like curated Vault content.
+- Makes the MVP storage root look like a curated Vault product surface.
+- Conflicts with the CEO decision that VaultFolder Curation is Future Work.
 
-### B. Duplicate Photos into Each VaultFolder
+### B. Include VaultFolder Curation in MVP Storage
 
 Pros:
 
-- Very easy to browse a folder by file explorer.
+- Would make manual memory folders easy to browse in a file explorer.
 
 Cons:
 
-- Duplicates originals.
-- Creates consistency problems if metadata changes.
-- Makes VaultFolder look like physical storage instead of curation over Log IDs.
+- Expands MVP from preservation/search into curation.
+- Forces storage/export decisions for a feature that is not needed to prove the MVP.
+- Creates duplicate-media and consistency questions too early.
+
+Rejected for MVP by CEO Decision: VaultFolder is Future Work.
 
 ### C. Store Every Log as a Separate JSON File
 
@@ -310,16 +260,12 @@ Cons:
 - Requires an additional index file for month views.
 
 This may become attractive later, but the MVP proposal keeps a monthly `metadata.json`
-because DATA_MODEL v0.3 already names it as canonical.
+because DATA_MODEL v0.4 Draft already names it as canonical.
 
 ## Open Questions
 
 1. Is month-level `metadata.json` sufficient for MVP, or should we start with per-day partitions?
-2. VaultFolder is the app-internal curation folder such as "부산 여행" or "2026 여름".
-   When exporting the whole `DuriStorage/` folder, should each VaultFolder contain only
-   references (`folder.json`, `index.md`, `log_ids`), or should Duri also generate a
-   separate easy-browsing package that copies the actual photos/messages into that folder?
-3. What exact filesystem durability guarantees are required on the target deployment server?
+2. What exact filesystem durability guarantees are required on the target deployment server?
 
 ## Gate Notes
 

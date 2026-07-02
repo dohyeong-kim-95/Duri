@@ -6,6 +6,26 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## PRD v0.2.5 Draft / DATA_MODEL v0.4 Draft — 2026-07-03
+
+CEO Decision: VaultFolder is Future Work 반영.
+
+### Changed
+
+- MVP 범위에서 Manual VaultFolder Curation 제거
+- README Core Concept를 `Timeline -> View/Index`와 Future Work(`VaultFolder`, `AI View`)로 재정리
+- PRD §4.4를 "Search Now, Vault Later"로 변경
+- DATA_MODEL에서 `VaultFolder`를 Future Work 엔터티로 이동
+- WORKFLOW에서 MVP 사용자 흐름을 채팅/사진/Timeline/Search로 단순화
+- Storage Layout RFC에서 `vault/folders/` 구조와 VaultFolder Export 질문 제거
+- ADR-002와 EVENT_ENGINE의 "Timeline + Vault" 표현을 "Timeline 보존 + Search" 기준으로 정정
+
+### Gate
+
+- PRD 의미 변경, DATA_MODEL 범위 변경, Storage RFC 변경이므로 Fable Gate Review 요청 대상
+
+---
+
 ## RFC 0001 Draft Update — 2026-07-03
 
 CEO clarification 반영.
