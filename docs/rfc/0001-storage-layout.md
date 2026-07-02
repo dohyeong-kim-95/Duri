@@ -3,7 +3,7 @@
 - Status: Draft
 - Date: 2026-07-02
 - Updated: 2026-07-03
-- Related: PRD v0.2.5 Draft, DATA_MODEL v0.4 Draft, ADR-001, ADR-007, ADR-008
+- Related: PRD v0.2.5, DATA_MODEL v0.4, ADR-001, ADR-007, ADR-008
 
 ## Summary
 
@@ -272,7 +272,7 @@ Cons:
 - Requires an additional index file for month views.
 
 This may become attractive later, but the MVP proposal keeps a monthly `metadata.json`
-because DATA_MODEL v0.4 Draft already names it as canonical.
+because DATA_MODEL v0.4 already names it as canonical.
 
 ## Open Questions
 

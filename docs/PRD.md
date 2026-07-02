@@ -1,4 +1,4 @@
-# Duri PRD v0.2.5 Draft
+# Duri PRD v0.2.5
 
 > «Live together. Log automatically. Remember forever.»
 

@@ -1,10 +1,10 @@
-# Duri Data Model v0.4 Draft
+# Duri Data Model v0.4
 
 > 이 문서는 [PRD](./PRD.md)의 Everything is a Log / Timeline First /
 > Search / AI as Reader 원칙과 CEO Decisions for DATA_MODEL을 데이터 모델
 > 수준으로 구체화한다.
 >
-> **v0.4 Draft 변경 요약**: MVP Log Type을 `Message`, `Photo`로 제한하고,
+> **v0.4 변경 요약**: MVP Log Type을 `Message`, `Photo`로 제한하고,
 > Metadata는 AI 해석 없이 원본에서 기계적으로 추출 가능한 값만 저장한다.
 > MVP에서 VaultFolder Curation을 제외하고 Future Work로 이동한다.
 > ADR-005에 따라 Authentication 엔터티(`User`, `Device`, `InviteCode`,
@@ -445,4 +445,4 @@ DATA_MODEL Review에서 확인할 항목:
 - [x] Message text의 canonical source가 `metadata.json`임이 명시되어 있다.
 - [x] Auth 운영 데이터와 token hash가 Export에서 제외되어 있다.
 
-이 문서는 v0.4 Draft이며, 구현 중 세부 스키마가 바뀌면 RFC/ADR을 통해 갱신한다.
+이 문서는 v0.4이며, 구현 중 세부 스키마가 바뀌면 RFC/ADR을 통해 갱신한다.

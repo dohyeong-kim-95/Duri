@@ -1,6 +1,6 @@
 # ADR-008: Preservation-first MVP — VaultFolder Curation is Future Work
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-03
 - Related: PRD §4.4 Search Now, Vault Later; DATA_MODEL §7 Search and Metadata Exploration; WORKFLOW §1 MVP workflow; ADR-002 Decision 3
 

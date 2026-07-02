@@ -6,6 +6,25 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## PRD v0.2.5 / DATA_MODEL v0.4 / WORKFLOW v0.4 — 2026-07-03
+
+Fable 4차 Re-Review Pass와 CEO 최종 승인 반영.
+
+### Changed
+
+- PRD v0.2.5 Draft 해제
+- DATA_MODEL v0.4 Draft 해제
+- WORKFLOW v0.4 Draft 해제
+- ADR-008을 `Accepted`로 전환
+- README를 Storage Layout RFC 0001 Draft 유지 및 다음 Gate 기준으로 갱신
+
+### Remaining Gate
+
+- Storage Layout RFC 0001은 Draft 유지
+- 구현 착수 전 월/일 파티션과 배포 서버 파일시스템 내구성 보장 수준 확정 필요
+
+---
+
 ## Gate Re-review Request Update — 2026-07-03
 
 Fable 3차 Conditional Pass 조건(C1, C2) 반영.

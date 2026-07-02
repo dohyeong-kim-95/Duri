@@ -1,11 +1,11 @@
-# Duri Workflow v0.4 Draft
+# Duri Workflow v0.4
 
 > 이 문서는 사용자의 일상 행동이 어떻게 Log → Timeline → Search로 이어지는지,
 > 그리고 이 저장소에서 설계/구현을 진행하는 절차는 무엇인지를 정리한다.
 > 데이터 구조는 [DATA_MODEL.md](./DATA_MODEL.md), Future Work인 자동 클러스터링
 > 로직은 [EVENT_ENGINE.md](./EVENT_ENGINE.md) 참고.
 >
-> **v0.4 Draft 변경 요약**: CEO Decisions for DATA_MODEL에 따라 MVP Log Type은
+> **v0.4 변경 요약**: CEO Decisions for DATA_MODEL에 따라 MVP Log Type은
 > `Message`, `Photo` 두 가지로 제한한다. Metadata는 AI 해석 없이 원본에서
 > 기계적으로 추출 가능한 값만 저장하며, VaultFolder Curation은 Future Work로
 > 둔다. Responsive Web URL 접근을 MVP 전달 방식으로 둔다.
@@ -131,4 +131,4 @@ AI가 Event를 근거로 Vault 폴더 배치를 "제안" (View)
   SNS화, 수익화, MVP 단계의 AI 자동 분류/Event 정확도 추구 등)은 제안하지
   않는다.
 
-이 문서는 v0.4 Draft이며, 실제 구현 과정에서 ADR/RFC를 통해 갱신된다.
+이 문서는 v0.4이며, 실제 구현 과정에서 ADR/RFC를 통해 갱신된다.

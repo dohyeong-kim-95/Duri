@@ -5,6 +5,75 @@
 
 ---
 
+# CEO 최종 승인 — 2026-07-03
+
+CEO가 4차 심사(Pass) 결과를 확인하고 다음을 승인했다.
+
+- PRD v0.2.5 / DATA_MODEL v0.4 / WORKFLOW v0.4 Draft 해제
+- ADR-008 → Accepted
+
+승인 전 CEO 확인 사항 (Q&A로 검증됨):
+
+1. 채팅/사진/메타데이터는 `DuriStorage/timeline/` 하나의 폴더가 유일한
+   원본(canonical source)이며, DB/인덱스는 재생성 가능한 캐시다 (ADR-007).
+2. 접근은 등록된 두 사용자로 제한된다 (ADR-005: slot 1·2, 소모형 초대
+   코드, 기기별 세션 폐기).
+
+Codex는 위 확정 작업을 진행할 수 있다. RFC 0001은 Draft 유지 —
+구현 착수 전 별도 Gate 필요.
+
+**다음 Gate(구현 전 RFC/구현 심사)에 추가된 Fable 확인 항목**:
+
+- RFC Open Questions 2건 (월/일 파티션, 파일시스템 내구성 보장)
+- **서버 수준 보호**: 앱 인증과 별개로, `DuriStorage/` 폴더에 대한 OS 계정
+  정책·디스크 암호화 여부 등 배포 서버의 파일시스템 접근 통제를 확인할 것
+  (2026-07-03 CEO Q&A에서 도출).
+
+---
+
+# 4차 심사 (Re-Review) — 2026-07-03, commit `a268a64`
+
+- Scope: ADR-008 Proposed / ADR-002 복원+supersede / DATA_MODEL v0.4 Draft /
+  RFC 0001 Draft (3차 심사 Condition 해소 확인)
+
+## Verdict: 통과 (Pass) — CEO 최종 승인 대기
+
+3차 심사의 C1, C2가 모두 실제 diff에서 반영 확인되었다.
+
+### C1 해소 확인 ✓ — 결정 원장 복구
+
+- **ADR-008** (Preservation-first MVP: VaultFolder Curation is Future Work,
+  Proposed) 신설. 결정·배경·대안 3건·트레이드오프가 충실히 기록됐고, 특히
+  "Future Work 재도입 시 VaultFolder가 원본 큐레이션인지 View인지 그때
+  재결정한다"고 명시해 3차 심사의 non-blocking note까지 흡수했다.
+- **ADR-002**: Decision 3 원문 복원 + "Superseded by ADR-008" 표시,
+  Consequences 원문 복원 + 주석. Amended 헤더가 변경 내용을 정확히 기술.
+  Decision 4의 경미한 문구 조정은 허용 범위대로 Amended 주석으로 유지.
+- ADR 인덱스와 README Dashboard에 ADR-008 노출. DATA_MODEL §0 결정 기록
+  범위도 "3은 ADR-008"로 갱신되어 원장이 일관적이다.
+
+### C2 해소 확인 ✓ — 표시 정체성과 Auth 운영 데이터 분리
+
+- DATA_MODEL §10: Auth 운영 데이터(InviteCode, Session, token hash,
+  fingerprint, 기기 라벨, 폐기 요약)는 Export 전면 제외 유지. "추억 데이터의
+  표시 정체성은 Auth 운영 데이터가 아니다"를 명시하고 `metadata.json`에
+  `participants: {actor_id → display_name}` 맵을 포함하기로 했다.
+- RFC 0001: canonical 예시에 `participants` 맵 추가, §8이 "Auth Export
+  Boundary and Display Identity"로 재정의되어 참조된 발화자의 표시 이름을
+  필수 데이터로 요구한다. 모순이 해소됐다.
+- 부수 이점: 월별 `metadata.json`이 기록 시점의 표시 이름을 스냅샷하므로,
+  이름이 나중에 바뀌어도 당시의 호칭이 보존된다 — 장기 아카이브 관점에서
+  올바른 방향이다.
+
+## CEO 승인 후 Codex 진행 가능 항목
+
+1. PRD v0.2.5 / DATA_MODEL v0.4 / WORKFLOW v0.4 Draft 해제
+2. ADR-008 → Accepted
+3. RFC 0001은 Draft 유지 — 구현 착수 전 별도 Gate (Open Questions 2건:
+   월/일 파티션, 파일시스템 내구성 보장 수준)
+
+---
+
 # 3차 심사 — 2026-07-03, commit `fbb81fb` (VaultFolder De-scope)
 
 - Scope: PRD v0.2.5 Draft / DATA_MODEL v0.4 Draft / WORKFLOW v0.4 Draft /

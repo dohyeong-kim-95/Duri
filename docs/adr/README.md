@@ -54,4 +54,4 @@ ADR은 Duri의 아키텍처/설계와 관련해 **이미 내려진 결정**과 �
 | [ADR-005](./ADR-005-invite-code-two-person-auth.md) | Invite-code based two-person authentication (CEO Decision #005) | Accepted | 2026-07-02 |
 | [ADR-006](./ADR-006-raw-gps-location-metadata.md) | Raw GPS Location Metadata (CEO Decision #006) | Accepted | 2026-07-02 |
 | [ADR-007](./ADR-007-storage-is-export.md) | Storage is Export (CEO Decision #007) | Accepted | 2026-07-02 |
-| [ADR-008](./ADR-008-preservation-first-mvp-vaultfolder-future-work.md) | Preservation-first MVP — VaultFolder Curation is Future Work | Proposed | 2026-07-03 |
+| [ADR-008](./ADR-008-preservation-first-mvp-vaultfolder-future-work.md) | Preservation-first MVP — VaultFolder Curation is Future Work | Accepted | 2026-07-03 |
