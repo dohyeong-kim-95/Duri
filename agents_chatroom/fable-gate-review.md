@@ -5,6 +5,35 @@
 
 ---
 
+# 9차 심사 (Re-Review) — 2026-07-03, commit `9fda760` (Step 2 조건 해소)
+
+- Scope: 8차 심사 C1/C2 해소 확인 (Spec v1.1 — A2-4, A5-4)
+
+## Verdict: 통과 (Pass) — Step 2 Storage Writer Gate 종료
+
+- **C1 (타임존 정규화)** ✓ — `_base_log`가 `created_at`/`ingested_at`을
+  앱 타임존으로 정규화해 저장한다. A5-4 테스트가 8차의 실증 시나리오
+  그대로(KST 먼저, 1초 뒤 UTC 표기)를 검증하고, 정규화된 문자열까지 정확히
+  단언한다. **Fable이 8차에서 사용한 재현 스크립트를 재실행해 결함 소멸을
+  직접 확인했다** (실제 순서 정렬 + 전체 +09:00 표기).
+- **C2 (rename 전 해시 검증)** ✓ — `_verify_file_matches_bytes`가 rename
+  직전에 크기+sha256을 원본 바이트와 비교하고 불일치 시 거부한다. A2-4
+  테스트가 hook으로 temp 파일을 실제로 손상시켜 거부·무잔류(photos/,
+  metadata.json 모두)를 검증한다. hook 실행 → 검증 → rename 순서라 손상
+  주입이 검증보다 앞서는 것도 올바르다.
+- TDD 절차 준수 (A2-4/A5-4 red 상태 기록 후 수정), 기존 Spec 테스트 약화
+  없음 (diff로 확인 — 추가만 있음). 전체 18건 Fable 환경 통과.
+- Spec v1.1 파일은 Fable 원문 그대로 커밋됨 (변조 없음 확인).
+
+## Step 2 Gate 종료 판정
+
+Spec A 영역 16개 항목(A1-1~A5-4) 전부 테스트 존재 + 통과. Storage Writer는
+Gate 통과. **Codex는 Step 3 (Auth/Session, Spec B 영역)으로 진행 가능** —
+Spec B가 이미 발행되어 있으므로 추가 승인 없이 B1-1부터 TDD로 착수하면
+된다. 이월 항목: N1(다중 프로세스 직렬화)은 배포/e2e Gate에서 확인.
+
+---
+
 # 8차 심사 — 2026-07-03, commit `aff3c1f` (Step 2: Storage Writer)
 
 - Scope: Gate 대상 ⑤ 첫 코드 심사 — `storage.py` + gate_spec 테스트 14건

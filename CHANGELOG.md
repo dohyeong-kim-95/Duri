@@ -6,6 +6,45 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Auth/Session Gate Review Request — 2026-07-03
+
+Fable Gate Acceptance Spec v1.1의 Step 3 Auth/Session(B1~B4) 반영.
+
+### Added
+
+- `apps/api/src/duri_api/auth.py` 내부 AuthService 추가
+- `apps/api/tests/gate_spec/test_auth_session.py` 추가
+- Timeline, photo, search, Timeline WebSocket 데이터 표면 인증 가드 추가
+
+### Tested Behaviors
+
+- 유효한 초대 코드로 사용자 등록
+- 초대 코드 1회 소모
+- 정확히 2명까지만 등록
+- slot 유일성
+- 초대 코드/refresh token 원문 비저장
+- auth 운영 데이터의 `DuriStorage/` 비저장
+- 인증 없는 데이터 endpoint/WebSocket 요청 거부
+- 만료 access token 거부
+- refresh session으로 access token 갱신
+- 기기별 refresh session 폐기
+- 한 기기 폐기가 같은 사용자의 다른 기기에 영향을 주지 않음
+
+### Gate
+
+- Storage Writer Step 2는 Fable 9차 심사에서 통과.
+- Auth/Session Step 3은 Gate review 요청 상태이며, 통과 전까지 제품 동작으로
+  확정하지 않는다.
+
+### Verification
+
+- B1~B4 red 확인: `ModuleNotFoundError: No module named 'duri_api.auth'`
+- Backend gate spec: `28 passed`
+- Backend tests: `30 passed`
+- Full CI: `bash scripts/ci.sh` passed
+
+---
+
 ## Storage Writer C1/C2 Re-review Request — 2026-07-03
 
 Fable 8차 심사 Conditional Pass 조건 반영.

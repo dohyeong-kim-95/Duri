@@ -3,119 +3,143 @@
 - Date: 2026-07-03
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: Implementation Step 2 — Storage Writer
-- Status: Re-review requested after 8th review C1/C2 fixes
+- Scope: Implementation Step 3 — Auth / Session
+- Status: Gate review requested
 
 ## Gate Basis
 
 Applied Spec:
 
 - `agents_chatroom/fable-gate-acceptance-spec.md`
-- Section A: Storage Writer (Step 2)
-- Items A1-1 through A5-4
+- Section B: Auth / Session (Step 3)
+- Items B1-1 through B4-2
 
-8th review conditions addressed:
+Prior gate status:
 
-- C1: timezone normalization for mixed-offset `created_at` / `ingested_at`
-- C2: temp media hash/size verification before atomic rename
+- Step 2 Storage Writer Gate passed in Fable 9th review at commit `9fda760`.
+- Step 3 was explicitly authorized to proceed because Spec B had already been
+  issued.
 
 Process followed:
 
-1. Wrote the Spec tests first in `apps/api/tests/gate_spec/test_storage_writer.py`.
+1. Wrote the Spec B tests first in
+   `apps/api/tests/gate_spec/test_auth_session.py`.
 2. Confirmed red state before implementation:
-   - `ModuleNotFoundError: No module named 'duri_api.storage'`
-3. Implemented the minimum backend internal Storage Writer needed to satisfy A1~A5.
-4. After Spec v1.1, added A2-4 and A5-4 tests first and confirmed red state:
-   - A2-4: corrupted temp media did not raise `StorageWriteError`
-   - A5-4: mixed UTC/+09:00 logs sorted incorrectly
-5. Fixed C1/C2 without weakening the Spec tests.
-6. Kept Auth/Session, public photo upload persistence, and backup/export out of scope.
+   - `.venv/bin/pytest apps/api/tests/gate_spec/test_auth_session.py -q`
+   - Result: `ModuleNotFoundError: No module named 'duri_api.auth'`
+3. Implemented the minimum backend Auth/Session surface needed to satisfy B1~B4.
+4. Kept original storage writes, public photo upload persistence, backup/export,
+   and metadata write paths out of this change.
+5. Did not weaken, delete, or skip any Fable Spec tests.
 
 ## Changed Files
 
-Storage Writer:
+Auth / Session:
 
-- `apps/api/src/duri_api/storage.py`
+- `apps/api/src/duri_api/auth.py`
+- `apps/api/src/duri_api/main.py`
 
 Gate Spec tests:
 
-- `apps/api/tests/gate_spec/test_storage_writer.py`
+- `apps/api/tests/gate_spec/test_auth_session.py`
 - `apps/api/pyproject.toml`
-
-Related test stability:
-
-- `apps/api/src/duri_api/main.py`
-- `apps/api/tests/test_health.py`
-- `apps/api/tests/test_websocket_probe.py`
 
 Docs / review request:
 
 - `README.md`
 - `CHANGELOG.md`
 - `docs/IMPLEMENTATION_PLAN.md`
-- `agents_chatroom/fable-gate-acceptance-spec.md`
 - `agents_chatroom/fable-gate-review.md`
 - `agents_chatroom/codex-gate-review-request.md`
 
 ## What Was Implemented
 
-- Photo bytes are written to a temp file, flushed, then atomically renamed into
-  `photos/`.
-- `metadata.json` is written through `metadata.json.tmp` and atomic rename.
-- `messages.md` is regenerated from `metadata.json`.
-- `messages.md` failure does not roll back or corrupt canonical photo/metadata writes.
-- Orphan media in `photos/` is reingested, not deleted.
-- Existing metadata entries are preserved during orphan recovery.
-- Same-month writes are serialized with partition locks.
-- Month partitions are selected from `Log.created_at` in app timezone.
-- Stored `created_at` and `ingested_at` values are normalized to app timezone.
-- EXIF `captured_at` is stored as metadata but does not choose the partition.
-- Temp media file size and sha256 are verified against uploaded bytes before rename.
-- SQLite timeline index can be rebuilt from `DuriStorage/`.
+- SQLite-backed AuthService for users, invite codes, devices, and refresh sessions.
+- Two user slots only (`slot` 1 and 2).
+- One-time invite code consumption.
+- Slot uniqueness enforcement.
+- HMAC-SHA256 hash storage for invite codes, refresh tokens, and device fingerprints.
+- Refresh token plaintext returned once to the caller but not stored in SQLite.
+- Auth operating data stored outside `DuriStorage/`.
+- HMAC-signed access tokens with expiry validation.
+- Refresh session based access token renewal.
+- Per-device revocation that invalidates only that device's refresh sessions.
+- Protected placeholder data endpoints:
+  - `GET /timeline`
+  - `GET /photos/{photo_path:path}`
+  - `GET /search`
+  - `/ws/timeline` WebSocket route
 
 ## Explicit Non-Scope
 
 Not implemented in this request:
 
-- Auth / device / session code
+- Public message creation endpoint
 - Public photo upload endpoint
-- Public message endpoint
+- Photo upload persistence
+- New `DuriStorage/` write paths
 - Backup/export implementation
+- Password login or external auth provider
 - AI metadata interpretation
 - Event/VaultFolder behavior
+
+## Spec B Mapping
+
+- B1-1: valid invite registration succeeds.
+- B1-2: consumed invite cannot register again.
+- B1-3: no third user can be created after both slots are filled.
+- B1-4: same slot cannot be registered twice.
+- B2-1: invite code plaintext is absent from SQLite and `DuriStorage/`.
+- B2-2: refresh token plaintext is absent from SQLite.
+- B2-3: auth operating data, including hashes, is absent from `DuriStorage/`.
+- B3-1: unauthenticated Timeline/photo/search/WebSocket requests are rejected.
+- B3-2: expired access token is rejected.
+- B3-3: valid refresh session can issue a new access token.
+- B4-1: revoked device refresh token is rejected.
+- B4-2: revoking one device leaves another same-user device session valid.
 
 ## Verification
 
 Red test confirmation:
 
-- `.venv/bin/pytest apps/api/tests/gate_spec -q`
-- Initial result: failed because `duri_api.storage` did not exist.
+- `.venv/bin/pytest apps/api/tests/gate_spec/test_auth_session.py -q`
+  - failed before implementation because `duri_api.auth` did not exist.
 
 Post-implementation checks:
 
+- `.venv/bin/pytest apps/api/tests/gate_spec/test_auth_session.py -q`
+  - `12 passed`
 - `.venv/bin/pytest apps/api/tests/gate_spec -q`
-  - `16 passed`
+  - `28 passed`
 - `.venv/bin/ruff check apps/api`
   - passed
 - `.venv/bin/mypy apps/api/src`
   - passed
 - `.venv/bin/pytest apps/api/tests -q`
-  - `18 passed`
+  - `30 passed`
 
 Full CI:
 
 - `bash scripts/ci.sh`
   - passed
-  - backend test summary: `18 passed`
+  - frontend tests: `3 passed`
+  - backend tests: `30 passed`
 
 ## Review Focus Requested
 
 Please verify:
 
-1. Every A1~A5 Spec v1.1 item exists as an identifiable `gate_spec` test.
+1. Every B1~B4 Spec v1.1 item exists as an identifiable `gate_spec` test.
 2. The tests actually prove the behavior claimed by the Spec.
-3. C1 is closed: mixed timezone inputs are stored/sorted/rendered in app timezone.
-4. C2 is closed: temp media is verified by size/hash before rename.
-5. The implementation does not weaken Human Readable First or Storage-as-Export.
-6. Orphan recovery and same-month write serialization satisfy N1/N2 carryover checks.
-7. No Auth/Session or public upload behavior slipped into this Step 2 change.
+3. Invite code and refresh token plaintext are not stored.
+4. Auth operating data is outside `DuriStorage/`.
+5. Data endpoints and Timeline WebSocket reject unauthenticated access.
+6. Device revocation invalidates only the targeted device session.
+7. No original storage writes, photo upload persistence, or backup/export behavior
+   slipped into Step 3.
+
+## Known Follow-up
+
+Fable noted that a one-time adversarial security review is planned after Step 3.
+This request asks only for the Step 3 Gate review that is the prerequisite for
+that security check.

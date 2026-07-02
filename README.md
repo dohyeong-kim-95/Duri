@@ -51,7 +51,7 @@ https://duri.bubblelab.dev
 
 ### Current Architecture
 
-Design Gates Complete — Storage Writer Gate Review Requested
+Design Gates Complete — Auth/Session Gate Review Requested
 
 `DATA_MODEL.md` v0.4는 다음 CEO 결정을 반영한다.
 
@@ -82,11 +82,13 @@ CI 기준선: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 모든 p
 도착하면 해당 테스트를 이 CI에 추가한 뒤 Gate review를 요청한다.
 
 Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
-먼저 작성해 실패를 확인한 뒤 구현했다. 8차 심사 C1/C2를 반영해 현재
-재심사 요청 상태다.
+먼저 작성해 실패를 확인한 뒤 구현했고, 9차 심사에서 Gate 통과가 확인됐다.
 
-다만 Storage Writer 구현은 Gate 통과 전까지 제품 동작으로 확정되지 않는다.
-백업/Export, 인증/기기/세션 코드는 여전히 Gate 대상이다.
+Auth/Session Step 3은 Fable Gate Acceptance Spec v1.1 B1~B4를 테스트로
+먼저 작성해 실패를 확인한 뒤 구현했다. 현재 Fable Gate review 요청 상태다.
+
+다만 Auth/Session 구현은 Gate 통과 전까지 제품 동작으로 확정되지 않는다.
+백업/Export 코드는 여전히 Gate 대상이다.
 
 구현 Gate 이월 확인 항목:
 
@@ -95,7 +97,7 @@ Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
 - N3: 백업 스펙(주기, 복원 테스트, 보관 위치, 암호화 키 관리)
 - 서버 하드닝 실적용 확인(계정, SSH, 권한)
 
-현재 구현 완료, Gate review 대기:
+Gate 통과:
 
 - Storage Writer internal module
 - Fable Gate Acceptance Spec A1~A5 pytest suite (`gate_spec`)
@@ -105,6 +107,19 @@ Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
 - `messages.md` regeneration
 - orphan media recovery
 - SQLite timeline index rebuild from `DuriStorage/`
+
+현재 구현 완료, Gate review 대기:
+
+- Auth/Session internal module
+- Fable Gate Acceptance Spec B1~B4 pytest suite (`gate_spec`)
+- two-person invite-code registration limit
+- one-time invite consumption
+- no plaintext invite code / refresh token storage
+- auth operating data kept outside `DuriStorage/`
+- protected Timeline, photo, search, and Timeline WebSocket access
+- access token expiry rejection
+- refresh session access token renewal
+- per-device session revocation
 
 이미 완료된 자율 범위:
 
@@ -117,7 +132,7 @@ Storage Writer Step 2는 Fable Gate Acceptance Spec v1.1 A1~A5를 테스트로
 
 아직 구현 금지:
 
-- authentication/device sessions
+- public message write endpoint
 - photo upload persistence
 - public photo upload endpoint
 - backup/export implementation

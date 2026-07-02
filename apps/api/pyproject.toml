@@ -37,7 +37,7 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/gate_spec/test_storage_writer.py" = ["E501"]
+"tests/gate_spec/*.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

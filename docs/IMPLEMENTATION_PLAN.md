@@ -101,7 +101,7 @@ Not yet approved for implementation:
 
 ### Step 2 — Storage Writer TDD
 
-Status: implemented from Fable Gate Acceptance Spec v1.1; C1/C2 re-review requested.
+Status: Gate passed in Fable 9th review.
 
 Implemented test subjects:
 
@@ -128,15 +128,26 @@ Notes:
 
 ### Step 3 — Auth and Session TDD
 
-Status: wait for Fable Gate Acceptance Spec.
+Status: implemented from Fable Gate Acceptance Spec v1.1; Gate review requested.
 
-Expected test subjects:
+Implemented test subjects:
 
 - Only two users can register.
 - Invite codes are one-time use.
 - Invite code and refresh token originals are never stored.
 - Device sessions can be revoked independently.
 - Data access requires authentication.
+
+Notes:
+
+- Spec v1.1 tests live in `apps/api/tests/gate_spec/test_auth_session.py`.
+- Tests are marked with `pytest.mark.gate_spec`.
+- Initial red test was confirmed before implementation:
+  `ModuleNotFoundError: No module named 'duri_api.auth'`.
+- Auth operational state is stored in SQLite outside `DuriStorage/`.
+- `DuriStorage/` remains reserved for original Message/Photo canonical storage.
+- This step exposes only protected placeholder data endpoints; message/photo upload
+  persistence remains gated separately.
 
 ### Step 4 — Timeline and Search
 
@@ -163,5 +174,6 @@ Required CEO/Fable topics:
 
 ## 4. Current Next Action
 
-Finish the approved scaffold, verify CI, and then wait for Fable Gate Acceptance Spec
-before implementing original storage writes or authentication/session behavior.
+Wait for Fable Gate review of Step 3 Auth/Session. If it passes, proceed to the
+planned one-time adversarial security review before treating Auth/Session behavior
+as accepted product behavior.
