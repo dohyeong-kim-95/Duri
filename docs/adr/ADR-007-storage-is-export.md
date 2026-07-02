@@ -1,6 +1,6 @@
 # ADR-007: Storage is Export
 
-- Status: Proposed (CEO DATA_MODEL decision, pending Fable Gate Review)
+- Status: Accepted (CEO Decision #007)
 - Date: 2026-07-02
 - Related: PRD §9 Long-term Design Goals, ADR-001, [DATA_MODEL.md §10](../DATA_MODEL.md#10-storage-layout--export-v1)
 

@@ -1,9 +1,7 @@
-# Duri PRD v0.2.4 Draft
+# Duri PRD v0.2.4
 
 > «Live together. Log automatically. Remember forever.»
 
-> **Status: Draft — Pending Fable Gate Review.**
->
 > 변경 이력은 [CHANGELOG.md](../CHANGELOG.md)에서 관리한다.
 
 ---

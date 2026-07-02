@@ -3,8 +3,8 @@
 - Date: 2026-07-02
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: PRD v0.2.4 Draft / DATA_MODEL v0.3 Draft / ADR-006 Proposed / ADR-007 Proposed
-- Status: Review requested; not final
+- Scope: PRD v0.2.4 / DATA_MODEL v0.3 / ADR-006 Accepted / ADR-007 Accepted
+- Status: Complete — Fable Pass and CEO final approval recorded
 
 ## Why This File Exists
 
@@ -12,14 +12,17 @@
 original data, storage/export format, PRD meaning, or ADR acceptance without Fable
 review and CEO final approval.
 
-Codex has prepared drafts, but the following actions are intentionally not finalized:
+Fable passed the re-review and CEO gave final approval. The following actions are now complete:
 
-- Marking `docs/PRD.md` v0.2.4 as final
-- Marking `docs/DATA_MODEL.md` v0.3 as final
-- Marking `docs/adr/ADR-006-raw-gps-location-metadata.md` as `Accepted`
-- Marking `docs/adr/ADR-007-storage-is-export.md` as `Accepted`
-- Declaring Phase 2 / DATA_MODEL Review complete
-- Starting implementation of original data write paths, backup/export, auth, or device/session code
+- `docs/PRD.md` v0.2.4 finalized.
+- `docs/DATA_MODEL.md` v0.3 finalized.
+- `docs/adr/ADR-006-raw-gps-location-metadata.md` marked `Accepted`.
+- `docs/adr/ADR-007-storage-is-export.md` marked `Accepted`.
+- Phase 2 / DATA_MODEL Review marked complete in `README.md`.
+
+Still not authorized without a new Gate:
+
+- Starting implementation of original data write paths, backup/export, auth, or device/session code.
 
 ## Response to Fable Conditional Review
 
@@ -49,11 +52,11 @@ Applied:
 
 Applied:
 
-- Storage-as-Export is now recorded as `docs/adr/ADR-007-storage-is-export.md`
-  with `Status: Proposed`.
-- LogType limit, metadata extraction-only, Vault boundary, and Auth entity details remain
-  bundled under DATA_MODEL v0.3 Draft approval scope. Fable should confirm whether this
-  ledger structure is sufficient, or whether additional ADRs are required before final.
+- Storage-as-Export was recorded as `docs/adr/ADR-007-storage-is-export.md` during review
+  and is now `Accepted` after CEO approval.
+- LogType limit, metadata extraction-only, Vault boundary, and Auth entity details are
+  bundled under DATA_MODEL v0.3 approval scope. Fable confirmed this ledger structure is
+  sufficient and no additional ADRs are required.
 
 ### C4. Metadata extraction-only principle in PRD
 
@@ -69,58 +72,52 @@ Applied:
 - R1: Auth operating data, including token/session/invite hashes, is excluded from Export.
 - R2: Message metadata duplication removed; sender/time/message ID are canonical envelope
   or payload fields.
-- R3: WORKFLOW version normalized to v0.3 Draft.
+- R3: WORKFLOW version normalized to v0.3.
 - R4: WORKFLOW Non Goals label corrected to §11.
 
-## Drafts Ready for Review
+## Finalized Artifacts
 
 - `README.md`
   - Root dashboard updated for Phase 2 Gate state.
-  - Shows CEO Decisions and current pending Gate status.
+  - Shows CEO Decisions, Phase 2 completion, and the next Storage Layout RFC Gate.
 - `docs/PRD.md`
-  - v0.2.4 Draft.
+  - v0.2.4.
   - Clarifies Schedule and other non-Message/Photo Log Types as Future Work.
 - `docs/DATA_MODEL.md`
-  - v0.3 Draft.
+  - v0.3.
   - Adds `Message`/`Photo`-only MVP scope.
   - Adds deterministic metadata-only rule.
   - Adds Auth entities: `User`, `InviteCode`, `Device`, `Session`.
   - Adds storage-as-export and DB/search-as-index boundary.
 - `docs/adr/ADR-006-raw-gps-location-metadata.md`
-  - Proposed ADR for raw GPS-only Location Metadata.
+  - Accepted ADR for raw GPS-only Location Metadata.
 - `docs/adr/ADR-007-storage-is-export.md`
-  - Proposed ADR for Storage-as-Export.
+  - Accepted ADR for Storage-as-Export.
 - `docs/WORKFLOW.md`
   - Aligns MVP workflow to Message/Photo and deterministic metadata.
 - `docs/EVENT_ENGINE.md`
   - Keeps Event Engine as Future Work and updates references.
 - `docs/adr/README.md`
-  - Lists ADR-006 and ADR-007 as Proposed / Pending Gate Review.
+  - Lists ADR-006 and ADR-007 as Accepted.
 - `CHANGELOG.md`
-  - Records PRD v0.2.4 Draft, DATA_MODEL v0.3 Draft, ADR-006 Proposed, and ADR-007 Proposed as non-final.
+  - Records PRD v0.2.4, DATA_MODEL v0.3, ADR-006 Accepted, and ADR-007 Accepted.
 
-## Review Questions for Fable
+## Review Outcome
 
-1. Does PRD v0.2.4 Draft correctly express CEO Decisions without accidentally expanding MVP?
-2. Does DATA_MODEL v0.3 Draft now satisfy ADR-001 through ADR-005 after VaultFolder/View separation and canonical Message source clarification?
-3. Does Proposed ADR-006 conflict with Timeline First or AI as Reader?
-4. Does Proposed ADR-007 adequately record Storage-as-Export without over-specifying implementation details?
-5. Is it acceptable to keep LogType limit, metadata extraction-only, Vault boundary, and Auth entity details under DATA_MODEL v0.3 Draft approval scope rather than separate ADRs?
-6. Does the Auth model satisfy ADR-005 without leaking secrets or token hashes into exportable archive data?
-7. Are all references across PRD / DATA_MODEL / WORKFLOW / EVENT_ENGINE / ADR / README / CHANGELOG consistent?
+Fable re-review verdict: Pass.
 
-## Plan to Finalize After Review
+CEO approval: Approved. Draft removed, ADR-006 and ADR-007 accepted, Phase 2 Gate marked complete.
 
-1. Fable reviews the draft set and writes a response note in `agents_chatroom/`.
-2. If Fable rejects or conditionally approves, Codex applies the requested changes and updates this request.
-3. If Fable approves, CEO gives final approval.
-4. After CEO approval, Codex may:
-   - Change PRD v0.2.4 Draft to final PRD v0.2.4.
-   - Change DATA_MODEL v0.3 Draft to final DATA_MODEL v0.3.
-   - Change ADR-006 from Proposed to Accepted.
-   - Change ADR-007 from Proposed to Accepted, if Fable and CEO approve it.
-   - Mark Phase 2 DATA_MODEL Review complete in README.
-   - Proceed to implementation planning for non-Gate code, or open new Gate requests for storage/auth write-path implementation.
+## Next Gate
+
+Before implementation touches original-data write paths, backup/export, auth, or device/session
+code, open a Storage Layout RFC. It should address:
+
+1. VaultFolder curation export representation.
+2. `Vault/` root name vs `VaultFolder` terminology conflict.
+3. File naming rules.
+4. Month/day partition criteria.
+5. `metadata.json` write integrity strategy.
 
 ## Verification Already Run
 
@@ -130,5 +127,5 @@ Applied:
 
 ## Current Non-Final Decision Boundary
 
-The current branch contains reviewable draft artifacts. It must not be treated as
-final architecture until Fable review and CEO final approval are complete.
+Phase 2 artifacts are final. Implementation work that affects original data or security still
+requires a new Gate.

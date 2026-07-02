@@ -52,5 +52,5 @@ ADR은 Duri의 아키텍처/설계와 관련해 **이미 내려진 결정**과 �
 | [ADR-003](./ADR-003-ai-generates-views-not-data.md) | AI generates Views, not Data | Accepted | 2026-07-02 |
 | [ADR-004](./ADR-004-responsive-web-first.md) | Responsive Web First (CEO Decision #004) | Accepted | 2026-07-02 |
 | [ADR-005](./ADR-005-invite-code-two-person-auth.md) | Invite-code based two-person authentication (CEO Decision #005) | Accepted | 2026-07-02 |
-| [ADR-006](./ADR-006-raw-gps-location-metadata.md) | Raw GPS Location Metadata (CEO Decision #006) | Proposed — Pending Gate Review | 2026-07-02 |
-| [ADR-007](./ADR-007-storage-is-export.md) | Storage is Export (CEO DATA_MODEL decision) | Proposed — Pending Gate Review | 2026-07-02 |
+| [ADR-006](./ADR-006-raw-gps-location-metadata.md) | Raw GPS Location Metadata (CEO Decision #006) | Accepted | 2026-07-02 |
+| [ADR-007](./ADR-007-storage-is-export.md) | Storage is Export (CEO Decision #007) | Accepted | 2026-07-02 |

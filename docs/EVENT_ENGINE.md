@@ -1,7 +1,7 @@
 # Duri Event Engine v0.1 (Future Work)
 
 > **Status: Future Work — not part of MVP.**
-> [PRD v0.2.4 Draft §4.3 Timeline First](./PRD.md#43-timeline-first)는 MVP에서
+> [PRD v0.2.4 §4.3 Timeline First](./PRD.md#43-timeline-first)는 MVP에서
 > Event를 생성하지 않는다고 명시한다. MVP는 Log를 Timeline에 직접 쌓고,
 > 이후 Event Engine이 활용할 수 있도록 [Metadata](./DATA_MODEL.md#4-log)를
 > 축적하는 데 집중한다 ([PRD §6 Future Work](./PRD.md#6-mvp-goal)).

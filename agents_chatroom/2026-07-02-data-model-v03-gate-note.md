@@ -1,9 +1,9 @@
-# Gate Note: DATA_MODEL v0.3 Draft
+# Gate Note: DATA_MODEL v0.3
 
 - Date: 2026-07-02
 - Role: Architect
 - Audience: Claude Code Fable / Gate Keeper
-- Status: Revised after Fable Conditional Pass; ready for re-review; not final until CEO approval
+- Status: Complete — Fable Pass and CEO final approval recorded
 
 ## CEO Decisions Applied
 
@@ -21,7 +21,7 @@
   - CEO decisions summarized in the root README because the user reads this surface.
   - ADR-006 added to the decision table.
 - `docs/DATA_MODEL.md`
-  - Rewritten as v0.3 Draft.
+  - Rewritten as v0.3.
   - Added auth entities: `User`, `InviteCode`, `Device`, `Session`.
   - Added `MediaRef`, export-as-storage, search/index boundary, and gate checklist.
   - Revised after Fable review to separate original `VaultFolder` from derived
@@ -34,19 +34,19 @@
 - `docs/EVENT_ENGINE.md`
   - Updated stale PRD/DATA_MODEL references.
 - `docs/adr/ADR-006-raw-gps-location-metadata.md`
-  - New Proposed ADR for raw GPS-only location metadata.
+  - Accepted ADR for raw GPS-only location metadata.
 - `docs/adr/ADR-007-storage-is-export.md`
-  - New Proposed ADR for Storage-as-Export.
+  - Accepted ADR for Storage-as-Export.
 - `docs/adr/README.md`
   - ADR-006 added to index.
 - `CHANGELOG.md`
-  - DATA_MODEL v0.3 Draft section added.
+  - DATA_MODEL v0.3 section added.
 
 ## Gate Review Focus
 
 Please verify:
 
-- DATA_MODEL v0.3 Draft satisfies ADR-001 through ADR-005 and does not conflict with Proposed ADR-006 or Proposed ADR-007.
+- DATA_MODEL v0.3 satisfies ADR-001 through ADR-007.
 - Fable Conditions C1-C4 are addressed.
 - No Future Work has accidentally become an MVP requirement.
 - Auth model is representable without external Auth Provider.

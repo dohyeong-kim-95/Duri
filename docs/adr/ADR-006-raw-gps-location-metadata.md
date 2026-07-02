@@ -1,6 +1,6 @@
 # ADR-006: Raw GPS Location Metadata
 
-- Status: Proposed (CEO Decision #006, pending Fable Gate Review)
+- Status: Accepted (CEO Decision #006)
 - Date: 2026-07-02
 - Related: PRD §3 First Principle, PRD §4.5 AI as Reader, [DATA_MODEL.md §4.2](../DATA_MODEL.md#42-photo-payload), [DATA_MODEL.md §8.1](../DATA_MODEL.md#81-future-work-location-alias)
 

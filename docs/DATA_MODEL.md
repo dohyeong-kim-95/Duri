@@ -1,12 +1,10 @@
-# Duri Data Model v0.3 Draft
+# Duri Data Model v0.3
 
 > 이 문서는 [PRD](./PRD.md)의 Everything is a Log / Timeline First /
 > Vault / AI as Reader 원칙과 CEO Decisions for DATA_MODEL을 데이터 모델
 > 수준으로 구체화한다.
 >
-> **Status: Draft — Pending Fable Gate Review.**
->
-> **v0.3 Draft 변경 요약**: MVP Log Type을 `Message`, `Photo`로 제한하고,
+> **v0.3 변경 요약**: MVP Log Type을 `Message`, `Photo`로 제한하고,
 > Metadata는 AI 해석 없이 원본에서 기계적으로 추출 가능한 값만 저장한다.
 > ADR-005에 따라 Authentication 엔터티(`User`, `Device`, `InviteCode`,
 > `Session`)를 추가했고, ADR-006에 따라 위치 원본 Metadata는 사진 EXIF의
@@ -14,7 +12,7 @@
 
 ## 0. Decision Record Scope
 
-이 Draft는 다음 CEO DATA_MODEL 결정을 하나의 Gate 승인 범위로 묶어 기록한다.
+이 문서는 다음 CEO DATA_MODEL 결정을 하나의 Gate 승인 범위로 묶어 기록한다.
 
 - MVP Log Type 제한: `Message`, `Photo`만 지원
 - Metadata 추출 전용 원칙: 해석/AI/NLP 없음
@@ -23,8 +21,8 @@
 
 별도 ADR로 분리한 결정:
 
-- ADR-006 Proposed: Raw GPS Location Metadata
-- ADR-007 Proposed: Storage is Export
+- ADR-006: Raw GPS Location Metadata
+- ADR-007: Storage is Export
 
 ---
 
@@ -434,5 +432,4 @@ DATA_MODEL Review에서 확인할 항목:
 - [x] Message text의 canonical source가 `metadata.json`임이 명시되어 있다.
 - [x] Auth 운영 데이터와 token hash가 Export에서 제외되어 있다.
 
-이 문서는 v0.3 Draft이며, Fable Gate Review와 CEO 최종 승인 전까지 확정본이
-아니다. 구현 중 세부 스키마가 바뀌면 RFC/ADR을 통해 갱신한다.
+이 문서는 v0.3이며, 구현 중 세부 스키마가 바뀌면 RFC/ADR을 통해 갱신한다.

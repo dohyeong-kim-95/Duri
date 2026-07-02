@@ -6,10 +6,10 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
-## PRD v0.2.4 Draft — 2026-07-02
+## PRD v0.2.4 — 2026-07-02
 
-CEO Decisions for DATA_MODEL과 PRD 표현 정합성 반영 초안. Fable Gate Review와
-CEO 최종 승인 전까지 확정본이 아니다.
+CEO Decisions for DATA_MODEL과 PRD 표현 정합성 반영. Fable Gate Review와
+CEO 최종 승인을 거쳐 확정.
 
 ### Changed
 
@@ -18,19 +18,18 @@ CEO 최종 승인 전까지 확정본이 아니다.
 
 ---
 
-## DATA_MODEL v0.3 Draft — 2026-07-02
+## DATA_MODEL v0.3 — 2026-07-02
 
-CEO Decisions for DATA_MODEL 반영 초안. Fable Gate Review와 CEO 최종 승인
-전까지 확정본이 아니다.
+CEO Decisions for DATA_MODEL 반영. Fable Gate Review와 CEO 최종 승인을 거쳐 확정.
 
 ### Added
 
-- **DATA_MODEL v0.3 Draft** — MVP Log Type을 `Message`, `Photo`로 제한
+- **DATA_MODEL v0.3** — MVP Log Type을 `Message`, `Photo`로 제한
 - Authentication 엔터티 추가: `User`, `InviteCode`, `Device`, `Session`
 - Export-as-storage 원칙 명시 — Markdown / JSON / 원본 사진 파일이 원본 보존 구조
 - Search/DB는 원본이 아니라 재생성 가능한 인덱스임을 명시
-- **ADR-006 Proposed** — Location Metadata는 사진 EXIF의 GPS 좌표만 원본으로 저장
-- **ADR-007 Proposed** — 저장 구조 자체를 Export v1로 취급
+- **ADR-006 Accepted** — Location Metadata는 사진 EXIF의 GPS 좌표만 원본으로 저장
+- **ADR-007 Accepted** — 저장 구조 자체를 Export v1로 취급
 
 ### Changed
 

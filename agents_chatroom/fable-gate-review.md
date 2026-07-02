@@ -1,9 +1,81 @@
 # Fable Gate Review
 
-- Date: 2026-07-02
 - Reviewer: Fable (Gate Keeper)
-- Scope: PRD v0.2.4 Draft / DATA_MODEL v0.3 Draft / ADR-006 Proposed (commit `fd2c391`)
 - Requested via: `codex-gate-review-request.md`
+
+---
+
+# CEO 최종 승인 — 2026-07-02
+
+CEO가 PRD v0.2.4 / DATA_MODEL v0.3 / WORKFLOW v0.3 Draft 해제와
+ADR-006 / ADR-007 Accepted 전환을 승인했다.
+
+Codex는 Phase 2 DATA_MODEL Review 완료 표시를 진행할 수 있다.
+
+---
+
+# 2차 심사 (Re-Review) — 2026-07-02, commit `c86e08d`
+
+- Scope: PRD v0.2.4 Draft / DATA_MODEL v0.3 Draft / ADR-006 Proposed / ADR-007 Proposed
+
+## Verdict: 통과 (Pass) — CEO 최종 승인 대기
+
+1차 심사의 Condition 4건과 Recommendation 4건이 **모두 실제 파일에서
+반영 확인**되었다. 요청 노트의 주장과 diff가 일치한다.
+
+### 조건 해소 확인
+
+- **C1 (Vault 이중 정체성)** ✓ — `VaultFolder`(원본 큐레이션)와 Metadata
+  Exploration(재생성 가능한 View/Index)이 엔터티 수준에서 분리됐다.
+  `metadata_filter`가 VaultFolder 필드에서 제거되고 `log_ids`는 "사용자가
+  직접 담은 목록"으로만 정의됐다 (DATA_MODEL §7). View에 `metadata_exploration`
+  kind가 추가됐고 AI 없이도 생성 가능함이 명시됐다 (§8). PRD §4.4도 같은
+  분리를 서술하도록 갱신됐다 — 폴더 중심 원칙을 유지하면서 탐색을 파생
+  계층으로 분리한 해법이 원래 PRD 철학과도 더 잘 맞는다.
+- **C2 (Message canonical source)** ✓ — `metadata.json`이 canonical,
+  `messages.md`는 재생성 가능한 파생이며 충돌 시 `metadata.json` 우선
+  (DATA_MODEL §10). 재생성 방향이 명확해졌다.
+- **C3 (결정 원장)** ✓ — ADR-007 (Storage is Export, Proposed) 신설.
+  DATA_MODEL §0에 결정 기록 범위가 명시됐고 README에도 반영됐다.
+  **Q5에 대한 답**: LogType 제한·Metadata 추출 전용·Vault 경계·Auth 세부를
+  "DATA_MODEL v0.3 승인" 하나의 Gate 범위로 묶는 것은 적절하다. CEO 최종
+  승인 시 이 승인 자체가 결정 기록이 된다. 추가 ADR 불필요.
+- **C4 (PRD에 추출-전용 원칙)** ✓ — PRD §4.3에 추가됐다.
+
+### 권고 반영 확인
+
+- R1 ✓ Auth 운영 데이터(해시 포함) Export 전면 제외, User/Device 표시
+  목록으로 제한 (§10). R2 ✓ Message metadata 중복 제거 — "저장할 값이
+  없다"고 정직하게 서술. R3 ✓ WORKFLOW v0.3 Draft로 통일. R4 ✓ §11 라벨 수정.
+
+### ADR-007 심사
+
+통과. Human Readable First를 저장 계층의 불변식으로 승격시키는 결정으로
+ADR-001과 정합하며, **Non-Decision 섹션으로 구현 세부(파일명 규칙, 분할
+기준, 쓰기 무결성)를 명시적으로 RFC에 미룬 것이 특히 좋다** — 조기 과잉
+명세 우려(1차 Q4)를 정확히 해소했다.
+
+### 남는 노트 (non-blocking, Storage RFC에서 다룰 것)
+
+- DATA_MODEL §10 예시의 Export 루트 이름이 `Vault/`인데, 그 아래 구조는
+  연/월 파티션(Timeline 성격)이고 사용자 `VaultFolder`("부산 여행" 등)가
+  Export 트리에서 어떻게 표현되는지는 아직 없다. ADR-007이 세부를 RFC로
+  미뤘으므로 blocking은 아니지만, RFC에서 (a) VaultFolder 큐레이션의 Export
+  표현 방식(예: index/링크 파일), (b) `Vault/` 루트 이름과 `VaultFolder`
+  엔터티의 용어 충돌 해소를 다뤄야 한다.
+
+## CEO 승인 후 Codex 진행 가능 항목
+
+1. PRD v0.2.4 / DATA_MODEL v0.3 / WORKFLOW v0.3 Draft 해제
+2. ADR-006, ADR-007 → Accepted
+3. README Phase 2 DATA_MODEL Review 완료 표시
+4. 다음 Gate: 구현 착수 전 Storage Layout RFC (위 노트 포함)
+
+---
+
+# 1차 심사 — 2026-07-02, commit `fd2c391` (기록 보존)
+
+- Scope: PRD v0.2.4 Draft / DATA_MODEL v0.3 Draft / ADR-006 Proposed
 
 ## Verdict: 조건부 통과 (Conditional Pass)
 
