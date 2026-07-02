@@ -39,12 +39,12 @@
 
 ## Gate review 절차
 
-1. Codex는 Gate 대상 작업을 마치면 이 폴더(`agents_chatroom/`)에
-   `YYYY-MM-DD-<주제>-gate-note.md` 형식으로 review 요청 노트를 남긴다.
+1. Codex는 Gate 대상 작업을 마치면 이 폴더의 **`codex-gate-review-request.md`**를
+   갱신해 review를 요청한다 (CEO 확정 채널, 2026-07-02).
    변경 파일 목록, 적용한 CEO Decision, 검증 방법, 중점 확인 요청 사항을 포함한다.
 2. Fable은 PRD First Principle, ADR-001~ 정합성, 문서 간 일관성, Non Goals
    위반 여부를 기준으로 심사하고, 결과(통과/조건부 통과/반려 + 지적 사항)를
-   같은 폴더에 응답 노트로 남기고 CEO에게 보고한다.
+   **`fable-gate-review.md`**에 남기고 CEO에게 보고한다.
 3. 반려 시 Codex가 수정 후 재요청한다. 최종 확정(merge, ADR Accepted 등)은
    CEO 승인 후에만 진행한다.
 

@@ -1,4 +1,4 @@
-# Duri Workflow v0.2
+# Duri Workflow v0.3 Draft
 
 > 이 문서는 사용자의 일상 행동이 어떻게 Log → Timeline → Vault로 이어지는지,
 > 그리고 이 저장소에서 설계/구현을 진행하는 절차는 무엇인지를 정리한다.
@@ -25,7 +25,7 @@
                      Timeline에 시간순 반영 (즉시, Event 단계 없음)
                             │
                             ▼
-              Metadata 기반 Vault 탐색/정리 (AI 자동 정리 없음)
+              Metadata 기반 Timeline 탐색 + 사용자가 원할 때 VaultFolder에 직접 담음
                             │
                             ▼
         기간 / 메시지에 직접 등장한 단어 / 사진 Metadata 등으로 다시 탐색
@@ -50,8 +50,9 @@ Timeline 반영, Metadata 생성, 자동 백업은 시스템이 자동으로 수
 
 Event 자동 생성, AI 자동 분류, 여행/데이트 자동 생성, AI Memory, 다양한
 View 자동 생성은 모두 **Future Work**다 ([PRD §6](./PRD.md#6-mvp-goal),
-[§9 Non Goals](./PRD.md#11-non-goals)). Vault는 MVP에서 Metadata 기반
-탐색/정리 인터페이스로 시작하며 AI 자동 정리는 하지 않는다.
+[§11 Non Goals](./PRD.md#11-non-goals)). MVP에서 사용자가 직접 만든
+VaultFolder는 원본 큐레이션이고, Metadata 기반 탐색 조건과 결과는
+재생성 가능한 View/Index다. AI 자동 정리는 하지 않는다.
 
 ### 1.2 실패/예외 처리 원칙
 
@@ -129,4 +130,4 @@ AI가 Event를 근거로 Vault 폴더 배치를 "제안" (View)
   SNS화, 수익화, MVP 단계의 AI 자동 분류/Event 정확도 추구 등)은 제안하지
   않는다.
 
-이 문서는 v0.2이며, 실제 구현 과정에서 ADR/RFC를 통해 갱신된다.
+이 문서는 v0.3 Draft이며, 실제 구현 과정에서 ADR/RFC를 통해 갱신된다.

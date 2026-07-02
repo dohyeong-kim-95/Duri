@@ -88,11 +88,20 @@ MVP에서 Duri는 Event를 생성하지 않는다.
 
 모든 Log는 시간순 Timeline으로 저장되며, 미래의 Event Engine과 AI가 충분히 활용할 수 있도록 Metadata를 함께 축적한다.
 
+MVP Metadata는 원본 데이터에서 기계적으로 **추출** 가능한 값만 저장하며,
+사람 이름, 장소명, 여행/데이트 분류, AI 요약, AI 태깅처럼 의미를 **해석**하는
+작업은 Future Work다.
+
 Event 생성은 Future Work이다. ([ADR-002](adr/ADR-002-timeline-first.md), [EVENT_ENGINE.md](EVENT_ENGINE.md) 참고)
 
 ### 4.4 Vault
 
 Vault는 태그 기반 시스템이 아니라 사람이 이해하기 쉬운 폴더 중심 인터페이스를 제공한다.
+
+MVP에서 Vault는 두 성격을 분리한다.
+
+- 사용자가 직접 만든 폴더와 그 안에 담은 Log 목록은 원본 사용자 큐레이션이다.
+- Metadata 기반 탐색 조건과 검색 결과는 원본이 아니라 재생성 가능한 View/Index다.
 
 폴더는 저장 구조이자 사용자가 추억을 탐색하는 기본 UX이다.
 

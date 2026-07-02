@@ -3,7 +3,7 @@
 - Date: 2026-07-02
 - Role: Architect
 - Audience: Claude Code Fable / Gate Keeper
-- Status: Ready for Fable Gate Review; not final until CEO approval
+- Status: Revised after Fable Conditional Pass; ready for re-review; not final until CEO approval
 
 ## CEO Decisions Applied
 
@@ -24,6 +24,10 @@
   - Rewritten as v0.3 Draft.
   - Added auth entities: `User`, `InviteCode`, `Device`, `Session`.
   - Added `MediaRef`, export-as-storage, search/index boundary, and gate checklist.
+  - Revised after Fable review to separate original `VaultFolder` from derived
+    Metadata Exploration View/Index.
+  - Clarified `metadata.json` as canonical Message source and `messages.md` as derivative.
+  - Excluded Auth operating data and token/invite hashes from Export.
 - `docs/WORKFLOW.md`
   - Removed stale PWA success wording.
   - Narrowed MVP workflow to Message/Photo and deterministic metadata.
@@ -31,6 +35,8 @@
   - Updated stale PRD/DATA_MODEL references.
 - `docs/adr/ADR-006-raw-gps-location-metadata.md`
   - New Proposed ADR for raw GPS-only location metadata.
+- `docs/adr/ADR-007-storage-is-export.md`
+  - New Proposed ADR for Storage-as-Export.
 - `docs/adr/README.md`
   - ADR-006 added to index.
 - `CHANGELOG.md`
@@ -40,7 +46,8 @@
 
 Please verify:
 
-- DATA_MODEL v0.3 Draft satisfies ADR-001 through ADR-005 and does not conflict with Proposed ADR-006.
+- DATA_MODEL v0.3 Draft satisfies ADR-001 through ADR-005 and does not conflict with Proposed ADR-006 or Proposed ADR-007.
+- Fable Conditions C1-C4 are addressed.
 - No Future Work has accidentally become an MVP requirement.
 - Auth model is representable without external Auth Provider.
 - Storage/export model preserves Human Readable First.
