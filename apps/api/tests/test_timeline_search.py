@@ -132,6 +132,52 @@ def test_timeline_endpoint_filters_by_period_and_type(tmp_path: Path) -> None:
     assert [item["id"] for item in response.json()["items"]] == ["01J_MSG_JULY"]
 
 
+def test_timeline_summary_endpoint_reports_period_and_type_facets(tmp_path: Path) -> None:
+    storage_root = tmp_path / "DuriStorage"
+    writer = make_writer(storage_root)
+    writer.append_message(
+        log_id="01J_MSG_JULY",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:28:00+09:00"),
+        message_id="01J_MESSAGE_JULY",
+        text="7월 메시지",
+    )
+    writer.append_photo(
+        log_id="01J_PHOTO_JULY",
+        actor_id="01J_USER_2",
+        created_at=dt("2026-07-12T19:30:00+09:00"),
+        photo_bytes=b"july photo",
+        original_filename="july.jpg",
+        mime_type="image/jpeg",
+    )
+    writer.append_message(
+        log_id="01J_MSG_AUGUST",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-08-01T09:00:00+09:00"),
+        message_id="01J_MESSAGE_AUGUST",
+        text="8월 메시지",
+    )
+    auth_context = make_auth(tmp_path)
+
+    response = asyncio.run(
+        get_json(
+            auth=auth_context["service"],
+            storage_root=storage_root,
+            access_token=auth_context["access_token"],
+            path="/timeline/summary",
+        )
+    )
+
+    assert response.status_code == 200
+    summary = response.json()
+    assert summary["total"] == 3
+    assert summary["types"] == {"Message": 2, "Photo": 1}
+    assert summary["periods"] == [
+        {"period": "2026-08", "total": 1, "types": {"Message": 1}},
+        {"period": "2026-07", "total": 2, "types": {"Message": 1, "Photo": 1}},
+    ]
+
+
 def test_search_endpoint_filters_timeline_logs_from_duri_storage(tmp_path: Path) -> None:
     storage_root = tmp_path / "DuriStorage"
     writer = make_writer(storage_root)

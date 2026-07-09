@@ -58,6 +58,33 @@ def search_timeline_logs(
     ]
 
 
+def read_timeline_summary(storage_root: Path | None) -> JsonObject:
+    logs = read_timeline_logs(storage_root)
+    type_totals: dict[str, int] = {}
+    period_totals: dict[str, JsonObject] = {}
+
+    for log in logs:
+        log_type = str(log.get("type", ""))
+        period = str(log.get("period", ""))
+        if not log_type or not period:
+            continue
+
+        type_totals[log_type] = type_totals.get(log_type, 0) + 1
+        period_summary = period_totals.setdefault(
+            period,
+            {"period": period, "total": 0, "types": {}},
+        )
+        period_summary["total"] = int(period_summary["total"]) + 1
+        period_types = cast(dict[str, int], period_summary["types"])
+        period_types[log_type] = period_types.get(log_type, 0) + 1
+
+    return {
+        "total": len(logs),
+        "periods": [period_totals[period] for period in sorted(period_totals, reverse=True)],
+        "types": dict(sorted(type_totals.items())),
+    }
+
+
 def _read_metadata_files(storage_root: Path) -> list[JsonObject]:
     if not storage_root.exists():
         return []

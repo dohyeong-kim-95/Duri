@@ -127,6 +127,7 @@ Gate 통과:
 Gate 불필요 read-only 구현 완료:
 
 - `GET /timeline` reads Timeline logs from `DuriStorage/metadata.json`
+- `GET /timeline/summary` returns read-only period/type counts for exploration
 - `GET /search?q=...` filters Timeline logs from `DuriStorage/metadata.json`
 - Timeline/Search support read-only period and log type filters
 - SQLite Timeline index can be rebuilt and queried from `DuriStorage/`

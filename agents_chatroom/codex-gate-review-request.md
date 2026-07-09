@@ -46,5 +46,6 @@ Starting checklist for that future review:
 
 No Fable review is being requested by this file at this moment. Initial read-only
 Timeline/Search API connection, frontend shell, read-only filters, and rebuildable
-SQLite Timeline/Search index helpers are implemented. Codex must update this file
+SQLite Timeline/Search index helpers are implemented. Read-only Timeline Summary
+facets are also implemented for UI filter options. Codex must update this file
 before any future Gate 대상 implementation review request.

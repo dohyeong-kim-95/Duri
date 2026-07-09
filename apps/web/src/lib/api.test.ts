@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ApiRequestError,
+  fetchTimelineSummary,
   fetchTimeline,
   formatTimelineTime,
   getApiBaseUrl,
@@ -61,6 +62,35 @@ describe("API endpoint configuration", () => {
       },
     ]);
     expect(response.items[0].id).toBe("01J");
+  });
+
+  it("fetches the authenticated timeline summary endpoint", async () => {
+    const calls: Array<{ input: string; authorization: string | null }> = [];
+
+    const response = await fetchTimelineSummary({
+      apiBaseUrl: "https://duri.example.test",
+      accessToken: "access-token",
+      fetcher: async (input, init) => {
+        const headers = new Headers(init?.headers);
+        calls.push({
+          input: input.toString(),
+          authorization: headers.get("Authorization"),
+        });
+        return Response.json({
+          total: 2,
+          periods: [{ period: "2026-07", total: 2, types: { Message: 1, Photo: 1 } }],
+          types: { Message: 1, Photo: 1 },
+        });
+      },
+    });
+
+    expect(calls).toEqual([
+      {
+        input: "https://duri.example.test/timeline/summary",
+        authorization: "Bearer access-token",
+      },
+    ]);
+    expect(response.periods[0].period).toBe("2026-07");
   });
 
   it("fetches search results with an encoded query", async () => {

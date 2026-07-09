@@ -27,6 +27,18 @@ export type TimelineResponse = {
   items: TimelineLog[];
 };
 
+export type TimelinePeriodSummary = {
+  period: string;
+  total: number;
+  types: Record<string, number>;
+};
+
+export type TimelineSummaryResponse = {
+  total: number;
+  periods: TimelinePeriodSummary[];
+  types: Record<string, number>;
+};
+
 export type SearchResponse = {
   results: TimelineLog[];
 };
@@ -83,6 +95,23 @@ export async function fetchTimeline({
   return requestJson<TimelineResponse>({
     apiBaseUrl,
     path: withQuery("/timeline", filters),
+    accessToken,
+    fetcher,
+  });
+}
+
+export async function fetchTimelineSummary({
+  apiBaseUrl = getApiBaseUrl(),
+  accessToken,
+  fetcher = fetch,
+}: {
+  apiBaseUrl?: string;
+  accessToken: string;
+  fetcher?: Fetcher;
+}): Promise<TimelineSummaryResponse> {
+  return requestJson<TimelineSummaryResponse>({
+    apiBaseUrl,
+    path: "/timeline/summary",
     accessToken,
     fetcher,
   });

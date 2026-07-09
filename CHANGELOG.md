@@ -6,6 +6,31 @@ Duri 문서(PRD 및 주요 결정)의 변경 이력을 기록한다.
 
 ---
 
+## Read-only Timeline Summary Facets — 2026-07-09
+
+Timeline exploration usability improvement.
+
+### Added
+
+- `GET /timeline/summary` for authenticated read-only period/type counts
+- Frontend period/type filter options backed by Timeline summary
+- API helper and tests for Timeline summary calls
+
+### Guardrails
+
+- Summary is derived from `DuriStorage/metadata.json`
+- No original-data write endpoint added
+- No auth HTTP endpoint added
+- No upload persistence added
+
+### Verification
+
+- Timeline/Search backend tests: `6 passed`
+- Frontend API tests: `9 passed`
+- Frontend lint and typecheck passed
+
+---
+
 ## Read-only SQLite Timeline Index — 2026-07-03
 
 Rebuildable Timeline/Search index improvement.

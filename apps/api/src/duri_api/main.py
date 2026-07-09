@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 
 from duri_api.auth import AuthError, AuthIdentity, AuthService
-from duri_api.timeline import read_timeline_logs, search_timeline_logs
+from duri_api.timeline import read_timeline_logs, read_timeline_summary, search_timeline_logs
 
 APP_VERSION = "0.1.0"
 
@@ -129,6 +129,14 @@ def create_app(
                 period=request.query_params.get("period"),
                 log_type=request.query_params.get("type"),
             ),
+            "identity": identity.as_dict(),
+        }
+
+    @app.get("/timeline/summary", tags=["data"])
+    async def timeline_summary(request: Request) -> dict[str, Any]:
+        identity = require_identity(request)
+        return {
+            **read_timeline_summary(storage_root),
             "identity": identity.as_dict(),
         }
 

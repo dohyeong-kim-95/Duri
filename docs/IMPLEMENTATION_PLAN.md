@@ -171,6 +171,7 @@ Expected behavior:
 - Frontend shell can call the read-only APIs when a future auth flow provides an
   access token.
 - Timeline/Search support read-only `period` and `type` filters.
+- Timeline Summary exposes read-only period/type counts for exploration controls.
 - SQLite Timeline/Search index helpers can rebuild full-log read/search results
   from `DuriStorage/`.
 

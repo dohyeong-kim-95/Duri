@@ -5,7 +5,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ApiRequestError,
   TimelineLog,
+  TimelineSummaryResponse,
   fetchTimeline,
+  fetchTimelineSummary,
   formatTimelineTime,
   readStoredAccessToken,
   searchTimeline,
@@ -13,6 +15,11 @@ import {
 } from "@/lib/api";
 
 type LoadState = "idle" | "loading" | "ready" | "locked" | "error";
+const EMPTY_SUMMARY: TimelineSummaryResponse = {
+  total: 0,
+  periods: [],
+  types: {},
+};
 
 export function TimelineWorkspace({
   apiBaseUrl,
@@ -23,6 +30,7 @@ export function TimelineWorkspace({
 }) {
   const [accessToken, setAccessToken] = useState("");
   const [items, setItems] = useState<TimelineLog[]>([]);
+  const [summary, setSummary] = useState<TimelineSummaryResponse>(EMPTY_SUMMARY);
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("");
   const [type, setType] = useState("");
@@ -38,7 +46,7 @@ export function TimelineWorkspace({
       return;
     }
 
-    void loadTimeline(token);
+    void loadInitial(token);
   }, [apiBaseUrl]);
 
   const statusText = useMemo(() => {
@@ -53,6 +61,36 @@ export function TimelineWorkspace({
     }
     return `${items.length} records`;
   }, [error, items.length, state]);
+
+  const typeOptions = useMemo(
+    () =>
+      Object.entries(summary.types).sort(([left], [right]) => {
+        const order = { Message: 0, Photo: 1 } as Record<string, number>;
+        return (order[left] ?? 99) - (order[right] ?? 99) || left.localeCompare(right);
+      }),
+    [summary.types],
+  );
+
+  async function loadInitial(token: string) {
+    setState("loading");
+    setError("");
+
+    try {
+      const [summaryResponse, timelineResponse] = await Promise.all([
+        fetchTimelineSummary({ apiBaseUrl, accessToken: token }),
+        fetchTimeline({
+          apiBaseUrl,
+          accessToken: token,
+          filters: currentFilters(),
+        }),
+      ]);
+      setSummary(summaryResponse);
+      setItems(timelineResponse.items);
+      setState("ready");
+    } catch (caught) {
+      handleRequestError(caught);
+    }
+  }
 
   async function loadTimeline(token = accessToken) {
     setState("loading");
@@ -154,17 +192,26 @@ export function TimelineWorkspace({
               <dd>{websocketUrl}</dd>
             </div>
             <div>
+              <dt>Archive</dt>
+              <dd>{summary.total} records</dd>
+            </div>
+            <div>
               <dt>Period</dt>
               <dd>
-                <input
+                <select
                   aria-label="Timeline period"
                   className="filter-input"
                   value={period}
                   onChange={(event) => setPeriod(event.target.value)}
-                  placeholder="YYYY-MM"
                   disabled={!accessToken || state === "loading"}
-                  inputMode="numeric"
-                />
+                >
+                  <option value="">All periods</option>
+                  {summary.periods.map((periodSummary) => (
+                    <option key={periodSummary.period} value={periodSummary.period}>
+                      {periodSummary.period} ({periodSummary.total})
+                    </option>
+                  ))}
+                </select>
               </dd>
             </div>
             <div>
@@ -177,9 +224,12 @@ export function TimelineWorkspace({
                   onChange={(event) => setType(event.target.value)}
                   disabled={!accessToken || state === "loading"}
                 >
-                  <option value="">All</option>
-                  <option value="Message">Message</option>
-                  <option value="Photo">Photo</option>
+                  <option value="">All types</option>
+                  {typeOptions.map(([typeName, total]) => (
+                    <option key={typeName} value={typeName}>
+                      {typeName} ({total})
+                    </option>
+                  ))}
                 </select>
               </dd>
             </div>
