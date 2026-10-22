@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -9,13 +11,47 @@ from duri_api.timeline import read_timeline_logs, timeline_search_text
 
 JsonObject = dict[str, Any]
 
+logger = logging.getLogger(__name__)
+
 
 def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
+    """Rebuild the SQLite timeline index from DuriStorage.
+
+    The index is built in a temp file and swapped in with os.replace, so a failed
+    rebuild leaves the previous index untouched. Duplicate log ids in canonical data
+    are tolerated: the first one is kept and a warning is logged.
+
+    Args:
+        storage_root: DuriStorage root directory.
+        db_path: Path of the SQLite index file.
+
+    Returns:
+        None.
+    """
     db_path.parent.mkdir(parents=True, exist_ok=True)
     logs = read_timeline_logs(storage_root)
+    temp_path = db_path.with_name(f"{db_path.name}.rebuild.tmp")
+    temp_path.unlink(missing_ok=True)
 
-    with sqlite3.connect(db_path) as connection:
-        connection.execute("DROP TABLE IF EXISTS timeline")
+    try:
+        _write_index(temp_path, logs)
+        os.replace(temp_path, db_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def _write_index(db_path: Path, logs: list[JsonObject]) -> None:
+    """Create the timeline table in a fresh SQLite file and insert all Logs.
+
+    Args:
+        db_path: Path of a new, empty SQLite file.
+        logs: Timeline Logs read from DuriStorage.
+
+    Returns:
+        None.
+    """
+    connection = sqlite3.connect(db_path)
+    try:
         connection.execute(
             """
             CREATE TABLE timeline (
@@ -30,23 +66,24 @@ def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
             )
             """
         )
-        connection.executemany(
-            """
-            INSERT INTO timeline (
-              log_id,
-              type,
-              created_at,
-              actor_id,
-              actor_display_name,
-              period,
-              search_text,
-              log_json
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [
+        for log in logs:
+            log_id = str(log.get("id", ""))
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO timeline (
+                  log_id,
+                  type,
+                  created_at,
+                  actor_id,
+                  actor_display_name,
+                  period,
+                  search_text,
+                  log_json
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 (
-                    str(log.get("id", "")),
+                    log_id,
                     str(log.get("type", "")),
                     str(log.get("created_at", "")),
                     str(log.get("actor_id", "")),
@@ -54,11 +91,17 @@ def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
                     str(log.get("period", "")),
                     timeline_search_text(log),
                     json.dumps(log, ensure_ascii=False, sort_keys=True),
+                ),
+            )
+            if cursor.rowcount == 0:
+                logger.warning(
+                    "duplicate log id %s in period %s; keeping the first one in the index",
+                    log_id,
+                    log.get("period"),
                 )
-                for log in logs
-            ],
-        )
         connection.commit()
+    finally:
+        connection.close()
 
 
 def query_timeline_index(db_path: Path) -> list[JsonObject]:

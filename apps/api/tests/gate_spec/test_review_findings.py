@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from duri_api.storage import DuriStorageWriter, StorageWriteHooks
+from duri_api import timeline_index
+from duri_api.storage import (
+    DuriStorageWriter,
+    StorageWriteHooks,
+    query_timeline_index,
+    rebuild_timeline_index,
+)
 
 PARTICIPANTS = {
     "01J_USER_1": "Dohyeong",
@@ -108,3 +114,52 @@ def test_r_h1_2_retry_with_same_log_id_is_idempotent(tmp_path: Path) -> None:
     assert log_ids == ["01J_MSG_R_H1_2", "01J_PHOTO_R_H1_2"]
     photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
     assert len(list(photos_dir.iterdir())) == 1
+
+
+def write_raw_metadata(storage_root: Path, period: str, metadata: dict[str, object]) -> None:
+    partition = storage_root / "timeline" / period[:4] / period
+    partition.mkdir(parents=True, exist_ok=True)
+    (partition / "metadata.json").write_text(
+        json.dumps(metadata, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+@pytest.mark.gate_spec(
+    "R-H2-1. 정본에 같은 `id`가 중복돼도 인덱스 재구축은 실패하지 않고, 실패하더라도 기존 인덱스는 남는다."
+)
+def test_r_h2_1_index_rebuild_tolerates_duplicate_ids_and_keeps_old_index_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R-H2-1. 정본에 같은 `id`가 중복돼도 인덱스 재구축은 실패하지 않고, 실패하더라도 기존 인덱스는 남는다."""
+    storage_root = tmp_path / "DuriStorage"
+    duplicated_log = {
+        "id": "01J_MSG_DUP",
+        "type": "Message",
+        "created_at": "2026-07-12T19:28:00+09:00",
+        "actor_id": "01J_USER_1",
+        "payload": {"text": "중복"},
+    }
+    write_raw_metadata(
+        storage_root,
+        "2026-07",
+        {
+            "schema_version": 1,
+            "period": "2026-07",
+            "participants": {},
+            "logs": [duplicated_log, dict(duplicated_log)],
+        },
+    )
+    db_path = tmp_path / "indexes" / "timeline.sqlite3"
+
+    rebuild_timeline_index(storage_root, db_path)
+    assert [row["log_id"] for row in query_timeline_index(db_path)] == ["01J_MSG_DUP"]
+
+    # A rebuild that fails midway must not leave the index dropped.
+    def fail_search_text(_log: dict[str, object]) -> str:
+        raise RuntimeError("simulated rebuild failure")
+
+    monkeypatch.setattr(timeline_index, "timeline_search_text", fail_search_text)
+    with pytest.raises(RuntimeError):
+        rebuild_timeline_index(storage_root, db_path)
+    assert [row["log_id"] for row in query_timeline_index(db_path)] == ["01J_MSG_DUP"]
