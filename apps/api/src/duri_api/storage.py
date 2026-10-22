@@ -199,6 +199,7 @@ class DuriStorageWriter:
                 for log in metadata["logs"]
                 for media_ref in log.get("media_refs", [])
             }
+            existing_ids = {log.get("id") for log in metadata["logs"]}
             recovered: list[JsonObject] = []
 
             for media_path in sorted(path for path in photos_dir.iterdir() if path.is_file()):
@@ -209,8 +210,20 @@ class DuriStorageWriter:
                 if relative_path in referenced:
                     continue
 
+                # Prefer the original created_at and log_id from the writer's own
+                # filename; fall back to a path-based id and the period start.
+                log_id = _recovered_log_id(relative_path)
+                created_at = self._period_start(period)
+                parsed = _parse_writer_photo_filename(media_path.name, self._timezone)
+                if parsed is not None:
+                    parsed_log_id, parsed_created_at = parsed
+                    parsed_period = parsed_created_at.strftime("%Y-%m")
+                    if parsed_period == period and parsed_log_id not in existing_ids:
+                        log_id = parsed_log_id
+                        created_at = parsed_created_at
+
                 media_ref = self._media_ref(
-                    log_id=_recovered_log_id(media_path),
+                    log_id=log_id,
                     media_path=media_path,
                     original_filename=media_path.name,
                     mime_type=(
@@ -218,11 +231,11 @@ class DuriStorageWriter:
                     ),
                 )
                 log = self._base_log(
-                    log_id=media_ref["log_id"],
+                    log_id=log_id,
                     log_type="Photo",
                     actor_id="system",
                     source="recovery_scan",
-                    created_at=self._period_start(period),
+                    created_at=created_at,
                     ingested_at=datetime.now(tz=self._timezone),
                 )
                 log["payload"] = {
@@ -242,6 +255,7 @@ class DuriStorageWriter:
                 metadata["logs"].append(log)
                 recovered.append(log)
                 referenced.add(relative_path)
+                existing_ids.add(log_id)
 
             if recovered:
                 self._write_metadata(period, metadata)
@@ -509,9 +523,49 @@ def _relative_to_root(storage_root: Path, path: Path) -> str:
     return path.relative_to(storage_root).as_posix()
 
 
-def _recovered_log_id(media_path: Path) -> str:
-    digest = hashlib.sha256(media_path.read_bytes()).hexdigest()[:26].upper()
+def _recovered_log_id(relative_path: str) -> str:
+    """Build a recovery Log id from the file's path, so two files never share an id.
+
+    Args:
+        relative_path: Photo path relative to the storage root.
+
+    Returns:
+        "RECOVERED_" followed by 26 hex chars of the path's sha256.
+    """
+    digest = hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:26].upper()
     return f"RECOVERED_{digest}"
+
+
+WRITER_PHOTO_FILENAME = re.compile(
+    r"^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})_([A-Za-z0-9_-]+)\.[A-Za-z0-9]{1,8}$"
+)
+
+
+def _parse_writer_photo_filename(
+    filename: str,
+    timezone: ZoneInfo,
+) -> tuple[str, datetime] | None:
+    """Read log_id and created_at back out of a filename made by _photo_filename.
+
+    Args:
+        filename: e.g. "2026-07-25T21-10-00_01J_PHOTO.jpg".
+        timezone: App timezone the timestamp was written in.
+
+    Returns:
+        (log_id, created_at), or None if the name does not match the pattern.
+        log_id is the sanitized form used in the filename.
+    """
+    match = WRITER_PHOTO_FILENAME.match(filename)
+    if match is None:
+        return None
+
+    timestamp_text = match.group(1)
+    log_id = match.group(2)
+    try:
+        naive_created_at = datetime.strptime(timestamp_text, "%Y-%m-%dT%H-%M-%S")
+    except ValueError:
+        return None
+    return log_id, naive_created_at.replace(tzinfo=timezone)
 
 
 def _available_photo_path(

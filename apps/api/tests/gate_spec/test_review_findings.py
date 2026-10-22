@@ -233,3 +233,45 @@ def test_r_h3_2_existing_identical_photo_file_is_reused(tmp_path: Path) -> None:
     assert [path.name for path in photos_dir.iterdir()] == [
         "2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg"
     ]
+
+
+@pytest.mark.gate_spec(
+    "R-H4-1. 같은 바이트의 orphan 파일 두 개는 서로 다른 id로 복구되고, 복구 뒤에도 인덱스 재구축이 가능하다."
+)
+def test_r_h4_1_identical_orphans_get_distinct_ids(tmp_path: Path) -> None:
+    """R-H4-1. 같은 바이트의 orphan 파일 두 개는 서로 다른 id로 복구되고, 복구 뒤에도 인덱스 재구축이 가능하다."""
+    photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
+    photos_dir.mkdir(parents=True)
+    (photos_dir / "copy-a.jpg").write_bytes(b"same photo")
+    (photos_dir / "copy-b.jpg").write_bytes(b"same photo")
+
+    recovered = make_writer(tmp_path).recover_orphan_media("2026-07")
+
+    recovered_ids = {log["id"] for log in recovered}
+    assert len(recovered_ids) == 2
+    db_path = tmp_path / "indexes" / "timeline.sqlite3"
+    rebuild_timeline_index(tmp_path, db_path)
+    assert len(query_timeline_index(db_path)) == 2
+
+
+@pytest.mark.gate_spec(
+    "R-H4-2. writer가 만든 파일명(`<created_at>_<log_id>.ext`)의 orphan은 원래 시각과 log_id로 복구되고, 그 외 파일만 월 시작 시각으로 복구된다."
+)
+def test_r_h4_2_orphan_from_writer_filename_keeps_created_at_and_log_id(
+    tmp_path: Path,
+) -> None:
+    """R-H4-2. writer가 만든 파일명(`<created_at>_<log_id>.ext`)의 orphan은 원래 시각과 log_id로 복구되고, 그 외 파일만 월 시작 시각으로 복구된다."""
+    photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
+    photos_dir.mkdir(parents=True)
+    (photos_dir / "2026-07-25T21-10-00_01J_PHOTO_CRASHED.jpg").write_bytes(b"crashed")
+    (photos_dir / "IMG_0001.jpg").write_bytes(b"manual copy")
+
+    recovered = make_writer(tmp_path).recover_orphan_media("2026-07")
+
+    by_filename = {log["media_refs"][0]["original_filename"]: log for log in recovered}
+    crashed = by_filename["2026-07-25T21-10-00_01J_PHOTO_CRASHED.jpg"]
+    manual = by_filename["IMG_0001.jpg"]
+    assert crashed["id"] == "01J_PHOTO_CRASHED"
+    assert crashed["created_at"] == "2026-07-25T21:10:00+09:00"
+    assert manual["id"].startswith("RECOVERED_")
+    assert manual["created_at"] == "2026-07-01T00:00:00+09:00"
