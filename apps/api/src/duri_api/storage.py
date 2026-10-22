@@ -112,24 +112,15 @@ class DuriStorageWriter:
             photos_dir = partition / "photos"
             photos_dir.mkdir(parents=True, exist_ok=True)
 
-            final_path = photos_dir / self._photo_filename(
+            filename = self._photo_filename(
                 log_id=log_id,
                 created_at=created_at,
                 original_filename=original_filename,
                 mime_type=mime_type,
             )
-            temp_path = partition / f".{final_path.name}.tmp"
-
-            try:
-                _write_bytes_durable(temp_path, photo_bytes)
-                if self.hooks.before_media_rename is not None:
-                    self.hooks.before_media_rename(temp_path, final_path)
-                _verify_file_matches_bytes(temp_path, photo_bytes)
-                os.replace(temp_path, final_path)
-                _fsync_directory(photos_dir)
-            except Exception as exc:
-                temp_path.unlink(missing_ok=True)
-                raise StorageWriteError("photo write failed before atomic rename") from exc
+            final_path, already_stored = _available_photo_path(photos_dir, filename, photo_bytes)
+            if not already_stored:
+                self._write_photo_file(partition, final_path, photo_bytes)
 
             media_ref = self._media_ref(
                 log_id=log_id,
@@ -162,6 +153,29 @@ class DuriStorageWriter:
 
             stored_log = self._append_log_locked(period, log)
             return _photo_result(stored_log)
+
+    def _write_photo_file(self, partition: Path, final_path: Path, photo_bytes: bytes) -> None:
+        """Write photo bytes via temp file, verify, then atomically rename into place.
+
+        Args:
+            partition: Month partition directory (temp file lives here).
+            final_path: Destination path in photos/. Must not exist yet.
+            photo_bytes: Original uploaded bytes.
+
+        Returns:
+            None. Raises StorageWriteError if anything fails before the rename.
+        """
+        temp_path = partition / f".{final_path.name}.tmp"
+        try:
+            _write_bytes_durable(temp_path, photo_bytes)
+            if self.hooks.before_media_rename is not None:
+                self.hooks.before_media_rename(temp_path, final_path)
+            _verify_file_matches_bytes(temp_path, photo_bytes)
+            os.replace(temp_path, final_path)
+            _fsync_directory(final_path.parent)
+        except Exception as exc:
+            temp_path.unlink(missing_ok=True)
+            raise StorageWriteError("photo write failed before atomic rename") from exc
 
     def regenerate_messages(self, period: str) -> str:
         partition = self._partition_path(period)
@@ -498,6 +512,40 @@ def _relative_to_root(storage_root: Path, path: Path) -> str:
 def _recovered_log_id(media_path: Path) -> str:
     digest = hashlib.sha256(media_path.read_bytes()).hexdigest()[:26].upper()
     return f"RECOVERED_{digest}"
+
+
+def _available_photo_path(
+    photos_dir: Path,
+    filename: str,
+    photo_bytes: bytes,
+) -> tuple[Path, bool]:
+    """Pick a photo path that never overwrites an existing original.
+
+    If a file already exists at the path with the same sha256, it is reused
+    (idempotent retry). If it holds different bytes, "_2", "_3", ... is added
+    before the extension until a free or identical file is found.
+
+    Args:
+        photos_dir: The partition's photos/ directory.
+        filename: The preferred filename from _photo_filename.
+        photo_bytes: The bytes about to be stored.
+
+    Returns:
+        (path, already_stored). already_stored is True when the path already
+        holds exactly these bytes and nothing needs to be written.
+    """
+    new_sha256 = hashlib.sha256(photo_bytes).hexdigest()
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
+    candidate = photos_dir / filename
+    number = 1
+    while candidate.exists():
+        existing_sha256 = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        if existing_sha256 == new_sha256:
+            return candidate, True
+        number += 1
+        candidate = photos_dir / f"{stem}_{number}{suffix}"
+    return candidate, False
 
 
 def _write_bytes_durable(path: Path, payload: bytes) -> None:

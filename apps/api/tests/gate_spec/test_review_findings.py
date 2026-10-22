@@ -163,3 +163,73 @@ def test_r_h2_1_index_rebuild_tolerates_duplicate_ids_and_keeps_old_index_on_fai
     with pytest.raises(RuntimeError):
         rebuild_timeline_index(storage_root, db_path)
     assert [row["log_id"] for row in query_timeline_index(db_path)] == ["01J_MSG_DUP"]
+
+
+@pytest.mark.gate_spec(
+    "R-H3-1. 사진 파일명이 겹쳐도 기존 원본 사진은 덮어써지지 않는다 — 같은 바이트면 기존 파일을 재사용하고, 다른 바이트면 새 이름으로 저장한다."
+)
+def test_r_h3_1_photo_filename_collision_never_overwrites_existing_original(
+    tmp_path: Path,
+) -> None:
+    """R-H3-1. 사진 파일명이 겹쳐도 기존 원본 사진은 덮어써지지 않는다 — 같은 바이트면 기존 파일을 재사용하고, 다른 바이트면 새 이름으로 저장한다."""
+    writer = make_writer(tmp_path)
+    created_at = dt("2026-07-12T19:30:22+09:00")
+    first = writer.append_photo(
+        log_id="01J_PHOTO.1",
+        actor_id="01J_USER_1",
+        created_at=created_at,
+        photo_bytes=b"first original",
+        original_filename="a.jpg",
+        mime_type="image/jpeg",
+    )
+    # "01J_PHOTO_1" sanitizes to the same filename as "01J_PHOTO.1".
+    second = writer.append_photo(
+        log_id="01J_PHOTO_1",
+        actor_id="01J_USER_2",
+        created_at=created_at,
+        photo_bytes=b"different bytes",
+        original_filename="b.jpg",
+        mime_type="image/jpeg",
+    )
+    third = writer.append_photo(
+        log_id="01J_PHOTO-1",
+        actor_id="01J_USER_2",
+        created_at=created_at,
+        photo_bytes=b"first original",
+        original_filename="c.jpg",
+        mime_type="image/jpeg",
+    )
+
+    first_path = tmp_path / first["media_ref"]["storage_path"]
+    second_path = tmp_path / second["media_ref"]["storage_path"]
+    assert first_path.read_bytes() == b"first original"
+    assert second_path != first_path
+    assert second_path.name.endswith("_2.jpg")
+    assert second_path.read_bytes() == b"different bytes"
+    # Identical bytes under a non-colliding name are simply stored normally.
+    assert (tmp_path / third["media_ref"]["storage_path"]).read_bytes() == b"first original"
+
+
+@pytest.mark.gate_spec(
+    "R-H3-2. 이미 같은 바이트의 사진 파일이 있는 경로로 다시 쓰면 파일을 새로 만들지 않고 그 파일을 참조한다 (크래시 후 재시도)."
+)
+def test_r_h3_2_existing_identical_photo_file_is_reused(tmp_path: Path) -> None:
+    """R-H3-2. 이미 같은 바이트의 사진 파일이 있는 경로로 다시 쓰면 파일을 새로 만들지 않고 그 파일을 참조한다 (크래시 후 재시도)."""
+    photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
+    photos_dir.mkdir(parents=True)
+    # Simulates a crash after the photo rename but before metadata.json was written.
+    (photos_dir / "2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg").write_bytes(b"same bytes")
+
+    result = make_writer(tmp_path).append_photo(
+        log_id="01J_PHOTO_R_H3_2",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:30:22+09:00"),
+        photo_bytes=b"same bytes",
+        original_filename="retry.jpg",
+        mime_type="image/jpeg",
+    )
+
+    assert result["media_ref"]["storage_path"].endswith("2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg")
+    assert [path.name for path in photos_dir.iterdir()] == [
+        "2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg"
+    ]
