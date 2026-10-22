@@ -9,10 +9,12 @@ import pytest
 from duri_api import timeline_index
 from duri_api.storage import (
     DuriStorageWriter,
+    StorageWriteError,
     StorageWriteHooks,
     query_timeline_index,
     rebuild_timeline_index,
 )
+from duri_api.timeline import read_timeline_logs, read_timeline_summary
 
 PARTICIPANTS = {
     "01J_USER_1": "Dohyeong",
@@ -275,3 +277,53 @@ def test_r_h4_2_orphan_from_writer_filename_keeps_created_at_and_log_id(
     assert crashed["created_at"] == "2026-07-25T21:10:00+09:00"
     assert manual["id"].startswith("RECOVERED_")
     assert manual["created_at"] == "2026-07-01T00:00:00+09:00"
+
+
+SINK_FORMAT_METADATA: dict[str, object] = {
+    "month": "2026-07",
+    "logs": [{"seq": 1, "at": 1752300000000, "name": "A", "type": "message", "text": "hi"}],
+}
+
+
+@pytest.mark.gate_spec(
+    "R-H5-1. `schema_version`이 없는 `metadata.json`은 Timeline/Summary에서 건너뛰며, `period: \"None\"` 같은 잘못된 결과를 내지 않는다."
+)
+def test_r_h5_1_readers_skip_metadata_without_schema_version(tmp_path: Path) -> None:
+    """R-H5-1. `schema_version`이 없는 `metadata.json`은 Timeline/Summary에서 건너뛰며, `period: "None"` 같은 잘못된 결과를 내지 않는다."""
+    write_raw_metadata(tmp_path, "2026-07", SINK_FORMAT_METADATA)
+    make_writer(tmp_path).append_message(
+        log_id="01J_MSG_R_H5_1",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-08-01T09:00:00+09:00"),
+        message_id="01J_MESSAGE_R_H5_1",
+        text="RFC 포맷 메시지",
+    )
+
+    logs = read_timeline_logs(tmp_path)
+    summary = read_timeline_summary(tmp_path)
+
+    assert [log["id"] for log in logs] == ["01J_MSG_R_H5_1"]
+    assert summary["periods"] == [
+        {"period": "2026-08", "total": 1, "types": {"Message": 1}}
+    ]
+
+
+@pytest.mark.gate_spec(
+    "R-H5-2. writer는 `schema_version`이 없는 기존 `metadata.json`을 덮어쓰지 않고 명확한 오류로 거부한다."
+)
+def test_r_h5_2_writer_refuses_metadata_without_schema_version(tmp_path: Path) -> None:
+    """R-H5-2. writer는 `schema_version`이 없는 기존 `metadata.json`을 덮어쓰지 않고 명확한 오류로 거부한다."""
+    write_raw_metadata(tmp_path, "2026-07", SINK_FORMAT_METADATA)
+    metadata_path = tmp_path / "timeline" / "2026" / "2026-07" / "metadata.json"
+    before = metadata_path.read_text(encoding="utf-8")
+
+    with pytest.raises(StorageWriteError, match="schema_version"):
+        make_writer(tmp_path).append_message(
+            log_id="01J_MSG_R_H5_2",
+            actor_id="01J_USER_1",
+            created_at=dt("2026-07-12T19:28:00+09:00"),
+            message_id="01J_MESSAGE_R_H5_2",
+            text="sink 파일에 쓰면 안 된다",
+        )
+
+    assert metadata_path.read_text(encoding="utf-8") == before

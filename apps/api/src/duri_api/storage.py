@@ -310,6 +310,13 @@ class DuriStorageWriter:
         metadata_path = self._metadata_path(period)
         if metadata_path.exists():
             metadata = cast(JsonObject, json.loads(metadata_path.read_text(encoding="utf-8")))
+            # Refuse to modify files that are not RFC 0001 metadata (e.g. the Bubblelab
+            # sink format). See docs/adr/ADR-009 (Proposed).
+            if "schema_version" not in metadata:
+                raise StorageWriteError(
+                    f"{metadata_path} has no schema_version; refusing to write to a "
+                    "non-RFC-0001 metadata.json (see docs/adr/ADR-009)"
+                )
             metadata.setdefault("participants", self._participants_payload())
             metadata.setdefault("logs", [])
             return metadata

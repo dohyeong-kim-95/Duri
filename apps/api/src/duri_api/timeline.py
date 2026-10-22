@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
 JsonObject = dict[str, Any]
+
+logger = logging.getLogger(__name__)
 
 
 def read_timeline_logs(
@@ -93,8 +96,17 @@ def _read_metadata_files(storage_root: Path) -> list[JsonObject]:
     metadata: list[JsonObject] = []
     for metadata_path in metadata_files:
         loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
-        if isinstance(loaded, dict):
-            metadata.append(cast(JsonObject, loaded))
+        if not isinstance(loaded, dict):
+            continue
+        # Files without schema_version (e.g. the Bubblelab sink's {month, logs[seq, at]}
+        # format) are not RFC 0001 metadata. Skip them until the format decision
+        # in docs/adr/ADR-009 is made.
+        if "schema_version" not in loaded:
+            logger.warning(
+                "skipping %s: no schema_version, not an RFC 0001 metadata.json", metadata_path
+            )
+            continue
+        metadata.append(cast(JsonObject, loaded))
     return metadata
 
 
