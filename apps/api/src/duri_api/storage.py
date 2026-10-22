@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import mimetypes
 import os
 import re
@@ -20,6 +21,8 @@ PathHook = Callable[[Path, Path], None]
 MessagesHook = Callable[[Path], None]
 
 SCHEMA_VERSION = 1
+
+logger = logging.getLogger(__name__)
 
 
 class StorageWriteError(RuntimeError):
@@ -79,8 +82,7 @@ class DuriStorageWriter:
         log["metadata"] = {}
         log["media_refs"] = []
 
-        self._append_log(period, log)
-        return log
+        return self._append_log(period, log)
 
     def append_photo(
         self,
@@ -99,6 +101,13 @@ class DuriStorageWriter:
         lock = self._lock_for(period)
 
         with lock:
+            existing_log = _find_log_by_id(self._read_metadata(period)["logs"], log_id)
+            if existing_log is not None:
+                logger.warning(
+                    "log %s already exists in %s; returning existing log", log_id, period
+                )
+                return _photo_result(existing_log)
+
             partition = self._partition_path(period)
             photos_dir = partition / "photos"
             photos_dir.mkdir(parents=True, exist_ok=True)
@@ -151,10 +160,8 @@ class DuriStorageWriter:
             }
             log["media_refs"] = [media_ref]
 
-            self._append_log_locked(period, log)
-            result = dict(log)
-            result["media_ref"] = media_ref
-            return result
+            stored_log = self._append_log_locked(period, log)
+            return _photo_result(stored_log)
 
     def regenerate_messages(self, period: str) -> str:
         partition = self._partition_path(period)
@@ -228,20 +235,48 @@ class DuriStorageWriter:
 
             return recovered
 
-    def _append_log(self, period: str, log: JsonObject) -> None:
+    def _append_log(self, period: str, log: JsonObject) -> JsonObject:
         lock = self._lock_for(period)
         with lock:
-            self._append_log_locked(period, log)
+            return self._append_log_locked(period, log)
 
-    def _append_log_locked(self, period: str, log: JsonObject) -> None:
+    def _append_log_locked(self, period: str, log: JsonObject) -> JsonObject:
+        """Append a Log to the period's metadata.json, idempotently.
+
+        Args:
+            period: Month partition such as "2026-07".
+            log: The new Log to append.
+
+        Returns:
+            The stored Log. If a Log with the same id already exists, that existing
+            Log is returned and nothing is written.
+        """
         metadata = self._read_metadata(period)
+        existing_log = _find_log_by_id(metadata["logs"], log["id"])
+        if existing_log is not None:
+            logger.warning(
+                "log %s already exists in %s; returning existing log", log["id"], period
+            )
+            return existing_log
+
         metadata["logs"].append(log)
         metadata["logs"] = _sorted_logs(metadata["logs"])
         self._write_metadata(period, metadata)
-        self._write_messages(
-            self._partition_path(period) / "messages.md",
-            _render_messages_markdown(metadata),
-        )
+
+        # metadata.json is committed at this point. messages.md is a derived view,
+        # so a failure here must not be reported as a failed write (RFC 0001 §10).
+        try:
+            self._write_messages(
+                self._partition_path(period) / "messages.md",
+                _render_messages_markdown(metadata),
+            )
+        except StorageWriteError:
+            logger.warning(
+                "messages.md regeneration failed for %s; metadata.json is committed",
+                period,
+                exc_info=True,
+            )
+        return log
 
     def _read_metadata(self, period: str) -> JsonObject:
         metadata_path = self._metadata_path(period)
@@ -400,6 +435,37 @@ def _render_messages_markdown(metadata: JsonObject) -> str:
         lines.append(f": {log['payload']['text']}")
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _find_log_by_id(logs: list[JsonObject], log_id: str) -> JsonObject | None:
+    """Find a Log by id.
+
+    Args:
+        logs: Logs from metadata.json.
+        log_id: The id to look for.
+
+    Returns:
+        The first Log with that id, or None if there is none.
+    """
+    for log in logs:
+        if log.get("id") == log_id:
+            return log
+    return None
+
+
+def _photo_result(log: JsonObject) -> JsonObject:
+    """Build the append_photo return value: the Log plus its first MediaRef.
+
+    Args:
+        log: A stored Photo Log.
+
+    Returns:
+        A copy of the Log with a "media_ref" key added.
+    """
+    result = dict(log)
+    media_refs = log.get("media_refs") or []
+    result["media_ref"] = media_refs[0] if media_refs else None
+    return result
 
 
 def _sorted_logs(logs: list[JsonObject]) -> list[JsonObject]:

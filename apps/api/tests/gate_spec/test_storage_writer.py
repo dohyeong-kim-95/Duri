@@ -207,15 +207,15 @@ def test_a2_3_messages_regeneration_failure_does_not_affect_metadata_or_photos(
         hooks=StorageWriteHooks(before_messages_write=fail_before_messages_write),
     )
 
-    with pytest.raises(StorageWriteError):
-        writer.append_photo(
-            log_id="01J_PHOTO_A2_3",
-            actor_id="01J_USER_1",
-            created_at=dt("2026-07-12T19:30:22+09:00"),
-            photo_bytes=photo_bytes,
-            original_filename="derived-failure.jpg",
-            mime_type="image/jpeg",
-        )
+    # messages.md is a derived view: its failure is logged, not raised (review H1).
+    writer.append_photo(
+        log_id="01J_PHOTO_A2_3",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:30:22+09:00"),
+        photo_bytes=photo_bytes,
+        original_filename="derived-failure.jpg",
+        mime_type="image/jpeg",
+    )
 
     metadata = read_metadata(tmp_path, "2026-07")
     media_ref = metadata["logs"][0]["media_refs"][0]  # type: ignore[index]
