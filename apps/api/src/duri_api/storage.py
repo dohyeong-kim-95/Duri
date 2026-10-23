@@ -103,6 +103,9 @@ class DuriStorageWriter:
         with lock:
             existing_log = _find_log_by_id(self._read_metadata(period)["logs"], log_id)
             if existing_log is not None:
+                # Photo retries may carry re-encoded bytes, so only type/actor are compared.
+                retry_log = {"id": log_id, "type": "Photo", "actor_id": actor_id}
+                _raise_if_different_log(existing_log, retry_log)
                 logger.warning(
                     "log %s already exists in %s; returning existing log", log_id, period
                 )
@@ -276,12 +279,14 @@ class DuriStorageWriter:
             log: The new Log to append.
 
         Returns:
-            The stored Log. If a Log with the same id already exists, that existing
-            Log is returned and nothing is written.
+            The stored Log. If a Log with the same id and the same content already
+            exists, that existing Log is returned and nothing is written. If the
+            content differs, StorageWriteError is raised and nothing is written.
         """
         metadata = self._read_metadata(period)
         existing_log = _find_log_by_id(metadata["logs"], log["id"])
         if existing_log is not None:
+            _raise_if_different_log(existing_log, log)
             logger.warning("log %s already exists in %s; returning existing log", log["id"], period)
             return existing_log
 
@@ -484,6 +489,76 @@ def _find_log_by_id(logs: list[JsonObject], log_id: str) -> JsonObject | None:
         if log.get("id") == log_id:
             return log
     return None
+
+
+def _raise_if_different_log(existing_log: JsonObject, new_log: JsonObject) -> None:
+    """Reject a write whose log_id is already used by a Log with different content.
+
+    Compared fields: type and actor_id always; created_at and payload.text for
+    Messages. A Log made by the recovery scan has actor "system", so actor_id is
+    not compared against it (the client retry is the same upload).
+
+    Args:
+        existing_log: The Log already stored under this id.
+        new_log: The Log (or for photos, its id/type/actor_id) being written.
+
+    Returns:
+        None when the content matches. Raises StorageWriteError otherwise.
+    """
+    different_fields: list[str] = []
+    if existing_log.get("type") != new_log.get("type"):
+        different_fields.append("type")
+
+    is_recovered = existing_log.get("source") == "recovery_scan"
+    if not is_recovered and existing_log.get("actor_id") != new_log.get("actor_id"):
+        different_fields.append("actor_id")
+
+    if new_log.get("type") == "Message":
+        existing_time = _parse_optional_datetime(existing_log.get("created_at"))
+        new_time = _parse_optional_datetime(new_log.get("created_at"))
+        if existing_time != new_time:
+            different_fields.append("created_at")
+        if _payload_text(existing_log) != _payload_text(new_log):
+            different_fields.append("payload.text")
+
+    if not different_fields:
+        return
+    raise StorageWriteError(
+        f"log id {new_log.get('id')} already exists with different content "
+        f"({', '.join(different_fields)})"
+    )
+
+
+def _parse_optional_datetime(value: object) -> datetime | None:
+    """Parse an ISO datetime string, or return None if it is missing or invalid.
+
+    Args:
+        value: Raw created_at value from a Log.
+
+    Returns:
+        The parsed datetime, or None.
+    """
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _payload_text(log: JsonObject) -> object:
+    """Return payload.text of a Log, or None if there is none.
+
+    Args:
+        log: A Log.
+
+    Returns:
+        The text value, or None.
+    """
+    payload = log.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    return payload.get("text")
 
 
 def _photo_result(log: JsonObject) -> JsonObject:

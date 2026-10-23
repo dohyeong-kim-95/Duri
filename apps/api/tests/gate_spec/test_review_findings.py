@@ -73,10 +73,12 @@ def test_r_h1_1_messages_failure_after_metadata_commit_is_reported_as_success(
 
 
 @pytest.mark.gate_spec(
-    "R-H1-2. 같은 `log_id`로 다시 쓰면 중복 Log를 만들지 않고 기존 Log를 반환한다 (메시지·사진 모두)."
+    "R-H1-2. 같은 `log_id`로 같은 내용을 다시 쓰면 중복 Log를 만들지 않고 기존 Log를 반환하고, 다른 내용(type·actor·시각·본문)이면 기존 Log를 돌려주지 않고 오류로 거부한다 (메시지·사진 모두, 사진의 재인코딩 바이트 차이는 같은 내용으로 본다)."
 )
-def test_r_h1_2_retry_with_same_log_id_is_idempotent(tmp_path: Path) -> None:
-    """R-H1-2. 같은 `log_id`로 다시 쓰면 중복 Log를 만들지 않고 기존 Log를 반환한다 (메시지·사진 모두)."""
+def test_r_h1_2_retry_with_same_log_id_is_idempotent_and_conflicts_are_rejected(
+    tmp_path: Path,
+) -> None:
+    """R-H1-2. 같은 `log_id`로 같은 내용을 다시 쓰면 중복 Log를 만들지 않고 기존 Log를 반환하고, 다른 내용(type·actor·시각·본문)이면 기존 Log를 돌려주지 않고 오류로 거부한다 (메시지·사진 모두, 사진의 재인코딩 바이트 차이는 같은 내용으로 본다)."""
     writer = make_writer(tmp_path)
     first_message = writer.append_message(
         log_id="01J_MSG_R_H1_2",
@@ -90,7 +92,7 @@ def test_r_h1_2_retry_with_same_log_id_is_idempotent(tmp_path: Path) -> None:
         actor_id="01J_USER_1",
         created_at=dt("2026-07-12T19:28:00+09:00"),
         message_id="01J_MESSAGE_R_H1_2",
-        text="재시도",
+        text="첫 시도",
     )
     first_photo = writer.append_photo(
         log_id="01J_PHOTO_R_H1_2",
@@ -115,6 +117,35 @@ def test_r_h1_2_retry_with_same_log_id_is_idempotent(tmp_path: Path) -> None:
     log_ids = [log["id"] for log in metadata["logs"]]  # type: ignore[attr-defined]
     assert log_ids == ["01J_MSG_R_H1_2", "01J_PHOTO_R_H1_2"]
     photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
+    assert len(list(photos_dir.iterdir())) == 1
+
+    # Same id, different content: a client id bug. Must not silently return the old Log.
+    with pytest.raises(StorageWriteError, match="different content"):
+        writer.append_message(
+            log_id="01J_MSG_R_H1_2",
+            actor_id="01J_USER_2",
+            created_at=dt("2026-07-12T20:00:00+09:00"),
+            message_id="01J_MESSAGE_R_H1_2",
+            text="DIFFERENT TEXT",
+        )
+    with pytest.raises(StorageWriteError, match="different content"):
+        writer.append_message(
+            log_id="01J_PHOTO_R_H1_2",
+            actor_id="01J_USER_2",
+            created_at=dt("2026-07-12T19:30:22+09:00"),
+            message_id="01J_MESSAGE_R_H1_2_PHOTO_ID",
+            text="photo id reused for a message",
+        )
+    with pytest.raises(StorageWriteError, match="different content"):
+        writer.append_photo(
+            log_id="01J_PHOTO_R_H1_2",
+            actor_id="01J_USER_1",
+            created_at=dt("2026-07-12T19:30:22+09:00"),
+            photo_bytes=b"someone else's photo",
+            original_filename="other.jpg",
+            mime_type="image/jpeg",
+        )
+    assert read_metadata(tmp_path, "2026-07") == metadata
     assert len(list(photos_dir.iterdir())) == 1
 
 
