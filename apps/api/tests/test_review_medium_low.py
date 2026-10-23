@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import pytest
+
 from duri_api.storage import DuriStorageWriter
 from duri_api.timeline import read_timeline_logs, read_timeline_summary, search_timeline_logs
 
@@ -86,3 +88,22 @@ def test_m1_log_without_created_at_or_broken_file_does_not_break_timeline(
     assert log_ids == ["01J_MSG_NO_TIME", "01J_MSG_NAIVE", "01J_MSG_OK"]
     assert read_timeline_summary(tmp_path)["total"] == 3
     assert [log["id"] for log in search_timeline_logs(tmp_path, "정상")] == ["01J_MSG_OK"]
+
+
+def test_m2_naive_datetime_is_rejected_and_nothing_is_written(tmp_path: Path) -> None:
+    writer = make_writer(tmp_path)
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        append_text(writer, "01J_MSG_NAIVE", "2026-07-31T20:00:00", "naive UTC")
+    with pytest.raises(ValueError, match="timezone-aware"):
+        writer.append_photo(
+            log_id="01J_PHOTO_NAIVE",
+            actor_id="01J_USER_A",
+            created_at=dt("2026-07-31T20:00:00"),
+            photo_bytes=b"naive",
+            original_filename="naive.jpg",
+            mime_type="image/jpeg",
+        )
+
+    assert list(tmp_path.rglob("*.json")) == []
+    assert [path for path in tmp_path.rglob("*") if path.is_file()] == []

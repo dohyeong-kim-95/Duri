@@ -632,8 +632,18 @@ def _sorted_logs(logs: list[JsonObject]) -> list[JsonObject]:
 
 
 def _as_app_datetime(value: datetime, timezone: ZoneInfo) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone)
+    """Convert an aware datetime to the app timezone.
+
+    Args:
+        value: Must carry a UTC offset. A naive value (e.g. datetime.utcnow()) is
+            ambiguous and would be stored hours off, so it is rejected.
+        timezone: App timezone.
+
+    Returns:
+        The same instant in the app timezone. Raises ValueError for naive input.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"datetime must be timezone-aware, got naive {value.isoformat()}")
     return value.astimezone(timezone)
 
 
