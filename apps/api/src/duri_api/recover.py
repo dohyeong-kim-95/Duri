@@ -1,7 +1,9 @@
 """Run orphan media recovery for every month partition.
 
 Usage:
-    python -m duri_api.recover --storage-root /path/to/DuriStorage --timezone Asia/Seoul
+    python -m duri_api.recover --storage-root /path/to/DuriStorage
+
+--timezone defaults to DURI_APP_TIMEZONE (the app writer's timezone).
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-from duri_api.storage import PERIOD_PATTERN, DuriStorageWriter
+from duri_api.storage import PERIOD_PATTERN, DuriStorageWriter, app_timezone_from_env
 
 
 def list_periods(storage_root: Path) -> list[str]:
@@ -121,7 +123,9 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = argparse.ArgumentParser(description="Recover orphan media in DuriStorage.")
     parser.add_argument("--storage-root", default=os.environ.get("DURI_STORAGE_ROOT"))
-    parser.add_argument("--timezone", default=os.environ.get("DURI_APP_TIMEZONE", "Asia/Seoul"))
+    # Same source as the app writer, so a partition created here never trips the
+    # writer's partition-timezone guard.
+    parser.add_argument("--timezone", default=app_timezone_from_env())
     arguments = parser.parse_args(argv)
     if not arguments.storage_root:
         parser.error("--storage-root or DURI_STORAGE_ROOT is required")

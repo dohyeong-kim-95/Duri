@@ -205,6 +205,7 @@ API 설정은 환경변수로 준다(없거나 시크릿이 32바이트 미만�
 | `DURI_JWT_SECRET` | 토큰 서명 키, 32바이트 이상 (필수) |
 | `DURI_HASH_SECRET` | 해시 키, 32바이트 이상, 서명 키와 달라야 함 (필수) |
 | `DURI_CORS_ORIGINS` | 허용 origin, 쉼표 구분 (기본 `http://localhost:3000`) |
+| `DURI_APP_TIMEZONE` | 앱 timezone — writer와 복구 CLI가 같은 값을 읽는다 (기본 `Asia/Seoul`) |
 
 ```bash
 bash scripts/ci.sh
@@ -214,8 +215,11 @@ Orphan media 복구(사진 rename 뒤 `metadata.json` 쓰기 전에 끊긴 경�
 돌지 않는다. 서버를 재시작한 뒤, 또는 크래시가 의심될 때 한 번 실행한다.
 
 ```bash
-.venv/bin/python -m duri_api.recover --storage-root /path/to/DuriStorage --timezone Asia/Seoul
+.venv/bin/python -m duri_api.recover --storage-root /path/to/DuriStorage
 ```
+
+`--timezone`을 생략하면 서버와 같은 `DURI_APP_TIMEZONE`(기본 `Asia/Seoul`)을 쓴다.
+서버와 다른 값을 주면 새로 만든 달이 다른 timezone으로 기록돼 서버가 그 달에 쓰지 못한다.
 
 ## Ownership
 

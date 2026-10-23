@@ -29,6 +29,8 @@ PathHook = Callable[[Path, Path], None]
 MessagesHook = Callable[[Path], None]
 
 SCHEMA_VERSION = 1
+DEFAULT_APP_TIMEZONE = "Asia/Seoul"
+APP_TIMEZONE_ENV_VAR = "DURI_APP_TIMEZONE"
 MAX_PHOTO_NAME_ATTEMPTS = 100
 PARTITION_LOCK_FILENAME = ".write.lock"
 
@@ -254,7 +256,7 @@ class DuriStorageWriter:
                 # The filename time was written in the partition's timezone, which
                 # may differ from the current app timezone.
                 log_id = _recovered_log_id(relative_path)
-                created_at = self._period_start(period)
+                created_at = _period_start(period, partition_timezone)
                 parsed = _parse_writer_photo_filename(media_path.name, partition_timezone)
                 if parsed is not None:
                     parsed_log_id, parsed_created_at = parsed
@@ -527,10 +529,6 @@ class DuriStorageWriter:
     def _period_for(self, created_at: datetime) -> str:
         return _as_app_datetime(created_at, self._timezone).strftime("%Y-%m")
 
-    def _period_start(self, period: str) -> datetime:
-        year, month = (int(part) for part in period.split("-", 1))
-        return datetime(year, month, 1, 0, 0, 0, tzinfo=self._timezone)
-
     def _photo_filename(
         self,
         *,
@@ -556,6 +554,23 @@ class DuriStorageWriter:
             if partition_key not in cls._partition_locks:
                 cls._partition_locks[partition_key] = threading.Lock()
             return cls._partition_locks[partition_key]
+
+
+def app_timezone_from_env(environ: Mapping[str, str] | None = None) -> str:
+    """Return the app timezone that the writer, the API and the recovery CLI share.
+
+    Args:
+        environ: Variables to read (None reads os.environ).
+
+    Returns:
+        DURI_APP_TIMEZONE, or DEFAULT_APP_TIMEZONE when it is unset or blank.
+    """
+    if environ is None:
+        environ = os.environ
+    app_timezone = environ.get(APP_TIMEZONE_ENV_VAR, "").strip()
+    if not app_timezone:
+        return DEFAULT_APP_TIMEZONE
+    return app_timezone
 
 
 PERIOD_PATTERN = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
@@ -781,6 +796,20 @@ def _zone_or_default(timezone_name: object, default: ZoneInfo) -> ZoneInfo:
     except (ValueError, KeyError):
         logger.warning("unknown timezone %r in metadata.json; using %s", timezone_name, default)
         return default
+
+
+def _period_start(period: str, timezone: ZoneInfo) -> datetime:
+    """Return midnight of the first day of a period.
+
+    Args:
+        period: Month partition such as "2026-07".
+        timezone: The partition's timezone, so the instant falls inside that month.
+
+    Returns:
+        The aware datetime of the period start.
+    """
+    year_text, month_text = period.split("-", 1)
+    return datetime(int(year_text), int(month_text), 1, 0, 0, 0, tzinfo=timezone)
 
 
 def _recovered_log_id(relative_path: str) -> str:

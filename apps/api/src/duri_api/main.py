@@ -4,11 +4,13 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from duri_api.auth import AuthError, AuthIdentity, AuthService
+from duri_api.storage import APP_TIMEZONE_ENV_VAR, app_timezone_from_env
 from duri_api.timeline import (
     read_timeline_logs,
     read_timeline_summary,
@@ -203,6 +205,8 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         DURI_HASH_SECRET: hash key, at least 32 bytes, different from the signing key
             (required).
         DURI_CORS_ORIGINS: comma-separated allowed origins (default localhost:3000).
+        DURI_APP_TIMEZONE: app timezone of the writer and the recovery CLI
+            (default Asia/Seoul).
 
     Args:
         environ: Variables to read (None reads os.environ).
@@ -220,6 +224,15 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     for name in ("DURI_JWT_SECRET", "DURI_HASH_SECRET"):
         if len(environ[name].encode("utf-8")) < MIN_SECRET_BYTES:
             raise ValueError(f"{name} must be at least {MIN_SECRET_BYTES} bytes")
+
+    # The writer and the recovery CLI read the same variable; fail fast on a typo.
+    app_timezone = app_timezone_from_env(environ)
+    try:
+        ZoneInfo(app_timezone)
+    except (ValueError, KeyError) as exc:
+        raise ValueError(
+            f"{APP_TIMEZONE_ENV_VAR} {app_timezone!r} is not a known timezone"
+        ) from exc
 
     cors_origins = DEFAULT_CORS_ORIGINS
     cors_text = environ.get("DURI_CORS_ORIGINS", "")

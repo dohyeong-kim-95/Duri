@@ -23,7 +23,7 @@ from duri_api import recover
 from duri_api.auth import AuthError, AuthService
 from duri_api.main import app as default_app
 from duri_api.main import create_app_from_env, handle_timeline_websocket
-from duri_api.storage import DuriStorageWriter, StorageWriteError
+from duri_api.storage import DuriStorageWriter, StorageWriteError, app_timezone_from_env
 from duri_api.timeline import (
     read_timeline_logs,
     read_timeline_summary,
@@ -537,3 +537,48 @@ def test_b2_one_failing_partition_does_not_stop_recovery_of_the_others(
     assert "2026-07: failed: StorageWriteError" in output.err
     assert "2026-08: failed: JSONDecodeError" in output.err
     assert len(read_metadata(tmp_path, "2026-09")["logs"]) == 1  # type: ignore[arg-type]
+
+
+def test_recovery_timezone_defaults_to_the_app_timezone_of_the_writer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DURI_APP_TIMEZONE", "UTC")
+    photos_dir = partition_path(tmp_path, "2026-08") / "photos"
+    photos_dir.mkdir(parents=True)
+    (photos_dir / "IMG_0001.jpg").write_bytes(b"orphan")
+
+    assert recover.main(["--storage-root", str(tmp_path)]) == 0
+    assert read_metadata(tmp_path, "2026-08")["timezone"] == "UTC"
+
+    utc_writer = make_writer(tmp_path, app_timezone=app_timezone_from_env())
+    append_text(utc_writer, "01J_MSG_AUG", "2026-08-02T10:00:00+00:00", "no guard error")
+    assert len(read_metadata(tmp_path, "2026-08")["logs"]) == 2  # type: ignore[arg-type]
+
+    monkeypatch.delenv("DURI_APP_TIMEZONE")
+    assert app_timezone_from_env() == "Asia/Seoul"
+
+
+def test_recovery_fallback_time_is_the_period_start_in_the_partition_timezone(
+    tmp_path: Path,
+) -> None:
+    make_writer(tmp_path, app_timezone="UTC").append_message(
+        log_id="01J_MSG_JULY",
+        actor_id="01J_USER_A",
+        created_at=dt("2026-07-12T10:00:00+00:00"),
+        message_id="01J_MSG_JULY_MESSAGE",
+        text="july",
+    )
+    photos_dir = partition_path(tmp_path, "2026-07") / "photos"
+    (photos_dir / "IMG_0001.jpg").write_bytes(b"orphan")
+
+    recovered = make_writer(tmp_path, app_timezone="Asia/Seoul").recover_orphan_media("2026-07")
+
+    assert [log["created_at"] for log in recovered] == ["2026-07-01T00:00:00+00:00"]
+
+
+def test_env_app_refuses_an_unknown_app_timezone(tmp_path: Path) -> None:
+    environ = valid_env(tmp_path)
+    environ["DURI_APP_TIMEZONE"] = "Mars/Olympus"
+    with pytest.raises(ValueError, match="DURI_APP_TIMEZONE"):
+        create_app_from_env(environ)
