@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -250,6 +251,42 @@ def test_r_h2_1_index_rebuild_tolerates_duplicate_ids_and_keeps_old_index_on_fai
     with pytest.raises(RuntimeError):
         rebuild_timeline_index(storage_root, db_path)
     assert [row["log_id"] for row in query_timeline_index(db_path)] == ["01J_MSG_DUP"]
+
+
+@pytest.mark.gate_spec(
+    "R-H2-2. 인덱스 재구축은 옛 인덱스에 남은 `-wal`/`-shm` 파일을 새 인덱스에 적용하지 않고, 임시 파일을 남기지 않는다."
+)
+def test_r_h2_2_index_rebuild_ignores_stale_wal_and_leaves_no_temp_files(tmp_path: Path) -> None:
+    """R-H2-2. 인덱스 재구축은 옛 인덱스에 남은 `-wal`/`-shm` 파일을 새 인덱스에 적용하지 않고, 임시 파일을 남기지 않는다."""
+    storage_root = tmp_path / "DuriStorage"
+    make_writer(storage_root).append_message(
+        log_id="01J_MSG_R_H2_2",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:28:00+09:00"),
+        message_id="01J_MESSAGE_R_H2_2",
+        text="정본",
+    )
+    db_path = tmp_path / "indexes" / "timeline.sqlite3"
+    rebuild_timeline_index(storage_root, db_path)
+
+    # Someone opened the index in WAL mode and left an uncheckpointed ghost row.
+    writer_connection = sqlite3.connect(db_path)
+    writer_connection.execute("PRAGMA journal_mode=WAL")
+    writer_connection.execute(
+        "INSERT INTO timeline VALUES ('GHOST', 'Message', 'x', 'U', '', '2026-07', '', '{}')"
+    )
+    writer_connection.commit()
+    reader_connection = sqlite3.connect(db_path)
+    reader_connection.execute("SELECT COUNT(*) FROM timeline").fetchone()
+    try:
+        rebuild_timeline_index(storage_root, db_path)
+        assert [row["log_id"] for row in query_timeline_index(db_path)] == ["01J_MSG_R_H2_2"]
+    finally:
+        writer_connection.close()
+        reader_connection.close()
+
+    leftover = [path.name for path in db_path.parent.iterdir() if ".rebuild." in path.name]
+    assert leftover == []
 
 
 @pytest.mark.gate_spec(

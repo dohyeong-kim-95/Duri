@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import secrets
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,10 @@ def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
     rebuild leaves the previous index untouched. Duplicate log ids in canonical data
     are tolerated: the first one is kept and a warning is logged.
 
+    The index uses SQLite's default rollback-journal mode. Leftover -wal/-shm/-journal
+    files next to db_path belong to the old file and would be applied to the new one,
+    so they are removed right before the swap.
+
     Args:
         storage_root: DuriStorage root directory.
         db_path: Path of the SQLite index file.
@@ -30,14 +35,31 @@ def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
     """
     db_path.parent.mkdir(parents=True, exist_ok=True)
     logs = read_timeline_logs(storage_root)
-    temp_path = db_path.with_name(f"{db_path.name}.rebuild.tmp")
-    temp_path.unlink(missing_ok=True)
+    # Unique per rebuild, so two concurrent rebuilds never delete each other's temp.
+    unique_suffix = f"{os.getpid()}.{secrets.token_hex(4)}"
+    temp_path = db_path.with_name(f"{db_path.name}.rebuild.{unique_suffix}.tmp")
 
     try:
         _write_index(temp_path, logs)
+        _remove_sqlite_sidecars(temp_path)
+        _remove_sqlite_sidecars(db_path)
         os.replace(temp_path, db_path)
     finally:
         temp_path.unlink(missing_ok=True)
+        _remove_sqlite_sidecars(temp_path)
+
+
+def _remove_sqlite_sidecars(db_path: Path) -> None:
+    """Delete the -wal, -shm and -journal files that belong to a SQLite file.
+
+    Args:
+        db_path: Path of the SQLite database file.
+
+    Returns:
+        None.
+    """
+    for suffix in ("-wal", "-shm", "-journal"):
+        db_path.with_name(f"{db_path.name}{suffix}").unlink(missing_ok=True)
 
 
 def _write_index(db_path: Path, logs: list[JsonObject]) -> None:
