@@ -481,3 +481,37 @@ def test_l6_refresh_updates_device_last_seen_at(
             "SELECT last_seen_at FROM devices WHERE id = ?", (registered["device"]["id"],)
         ).fetchone()[0]
     assert last_seen_at == 2_000_000.0
+
+
+def test_b1_writer_fills_participants_left_empty_by_recovery(tmp_path: Path) -> None:
+    photos_dir = partition_path(tmp_path, "2026-08") / "photos"
+    photos_dir.mkdir(parents=True)
+    (photos_dir / "IMG_0001.jpg").write_bytes(b"orphan")
+
+    assert recover.main(["--storage-root", str(tmp_path), "--timezone", "Asia/Seoul"]) == 0
+    assert read_metadata(tmp_path, "2026-08")["participants"] == {}
+
+    append_text(make_writer(tmp_path), "01J_MSG_AUG", "2026-08-02T10:00:00+09:00", "hi")
+
+    participants = read_metadata(tmp_path, "2026-08")["participants"]
+    assert participants == {
+        "01J_USER_A": {"display_name": "UserA"},
+        "01J_USER_B": {"display_name": "UserB"},
+    }
+    messages = (partition_path(tmp_path, "2026-08") / "messages.md").read_text(encoding="utf-8")
+    assert "10:00 — UserA" in messages
+
+
+def test_b1_recovery_uses_participants_known_from_another_month(tmp_path: Path) -> None:
+    append_text(make_writer(tmp_path), "01J_MSG_JULY", "2026-07-12T10:00:00+09:00", "july")
+    photos_dir = partition_path(tmp_path, "2026-08") / "photos"
+    photos_dir.mkdir(parents=True)
+    (photos_dir / "IMG_0001.jpg").write_bytes(b"orphan")
+
+    assert recover.load_known_participants(tmp_path) == PARTICIPANTS
+    assert recover.main(["--storage-root", str(tmp_path), "--timezone", "Asia/Seoul"]) == 0
+
+    assert read_metadata(tmp_path, "2026-08")["participants"] == {
+        "01J_USER_A": {"display_name": "UserA"},
+        "01J_USER_B": {"display_name": "UserB"},
+    }

@@ -399,7 +399,10 @@ class DuriStorageWriter:
                     f"{metadata_path} has schema_version {schema_version!r}, supported: "
                     f"{SUPPORTED_SCHEMA_VERSIONS}; refusing to write (see docs/rfc/0002)"
                 )
-            metadata.setdefault("participants", self._participants_payload())
+            # Fill participants when missing or empty (e.g. a partition first written
+            # by the recovery CLI before any participants were known).
+            if not metadata.get("participants"):
+                metadata["participants"] = self._participants_payload()
             metadata.setdefault("logs", [])
             return metadata
 
