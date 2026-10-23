@@ -149,6 +149,60 @@ def test_r_h1_2_retry_with_same_log_id_is_idempotent_and_conflicts_are_rejected(
     assert len(list(photos_dir.iterdir())) == 1
 
 
+@pytest.mark.gate_spec(
+    "R-H1-3. `metadata.json` 확정 뒤에는 `messages.md` 렌더링·쓰기에서 어떤 예외가 나도 쓰기와 orphan 복구는 성공으로 반환된다."
+)
+def test_r_h1_3_any_messages_failure_after_commit_is_swallowed(tmp_path: Path) -> None:
+    """R-H1-3. `metadata.json` 확정 뒤에는 `messages.md` 렌더링·쓰기에서 어떤 예외가 나도 쓰기와 orphan 복구는 성공으로 반환된다."""
+    # A hand-edited Message without payload.text makes rendering raise KeyError.
+    write_raw_metadata(
+        tmp_path,
+        "2026-07",
+        {
+            "schema_version": 1,
+            "period": "2026-07",
+            "timezone": "Asia/Seoul",
+            "participants": {},
+            "logs": [
+                {
+                    "id": "01J_MSG_HAND_EDITED",
+                    "type": "Message",
+                    "created_at": "2026-07-01T10:00:00+09:00",
+                    "actor_id": "01J_USER_1",
+                    "payload": {},
+                }
+            ],
+        },
+    )
+    writer = make_writer(tmp_path)
+
+    log = writer.append_message(
+        log_id="01J_MSG_R_H1_3",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:28:00+09:00"),
+        message_id="01J_MESSAGE_R_H1_3",
+        text="렌더링이 실패해도 정본은 저장된다",
+    )
+    assert log["id"] == "01J_MSG_R_H1_3"
+
+    def fail_before_messages_write(_messages_path: Path) -> None:
+        raise RuntimeError("simulated messages failure")
+
+    photos_dir = tmp_path / "timeline" / "2026" / "2026-08" / "photos"
+    photos_dir.mkdir(parents=True)
+    (photos_dir / "IMG_0002.jpg").write_bytes(b"orphan")
+    failing_writer = make_writer(
+        tmp_path,
+        hooks=StorageWriteHooks(before_messages_write=fail_before_messages_write),
+    )
+
+    recovered = failing_writer.recover_orphan_media("2026-08")
+
+    assert len(recovered) == 1
+    metadata_ids = [item["id"] for item in read_metadata(tmp_path, "2026-08")["logs"]]  # type: ignore[attr-defined]
+    assert metadata_ids == [recovered[0]["id"]]
+
+
 def write_raw_metadata(storage_root: Path, period: str, metadata: dict[str, object]) -> None:
     partition = storage_root / "timeline" / period[:4] / period
     partition.mkdir(parents=True, exist_ok=True)

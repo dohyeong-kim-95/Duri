@@ -262,7 +262,7 @@ class DuriStorageWriter:
 
             if recovered:
                 self._write_metadata(period, metadata)
-                self._write_messages(partition / "messages.md", _render_messages_markdown(metadata))
+                self._write_messages_after_commit(period, metadata)
 
             return recovered
 
@@ -294,20 +294,33 @@ class DuriStorageWriter:
         metadata["logs"] = _sorted_logs(metadata["logs"])
         self._write_metadata(period, metadata)
 
-        # metadata.json is committed at this point. messages.md is a derived view,
-        # so a failure here must not be reported as a failed write (RFC 0001 §10).
+        self._write_messages_after_commit(period, metadata)
+        return log
+
+    def _write_messages_after_commit(self, period: str, metadata: JsonObject) -> None:
+        """Regenerate messages.md after metadata.json has been committed.
+
+        messages.md is a derived view, so any failure here (rendering or writing)
+        is logged and swallowed: the write already succeeded (RFC 0001 §10).
+
+        Args:
+            period: Month partition such as "2026-07".
+            metadata: The metadata that was just committed.
+
+        Returns:
+            None.
+        """
         try:
             self._write_messages(
                 self._partition_path(period) / "messages.md",
                 _render_messages_markdown(metadata),
             )
-        except StorageWriteError:
+        except Exception:
             logger.warning(
                 "messages.md regeneration failed for %s; metadata.json is committed",
                 period,
                 exc_info=True,
             )
-        return log
 
     def _read_metadata(self, period: str) -> JsonObject:
         metadata_path = self._metadata_path(period)
