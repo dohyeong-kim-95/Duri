@@ -208,6 +208,11 @@ API 설정은 환경변수로 준다(없거나, 시크릿이 앞뒤 공백을 �
 | `DURI_CORS_ORIGINS` | 허용 origin, 쉼표 구분 (기본 `http://localhost:3000`) |
 | `DURI_APP_TIMEZONE` | 앱 timezone — writer와 복구 CLI가 같은 값을 읽는다 (기본 `Asia/Seoul`) |
 
+`DURI_STORAGE_ROOT`는 **로컬 파일시스템**(ext4·xfs·btrfs 등)이어야 한다. 사진은 `os.link`
+(하드링크)로 원자적으로 게시하고, 달마다 `fcntl.flock`으로 쓰기를 직렬화한다. 하드링크가
+없는 exFAT·FAT USB나 일부 SMB/FUSE 마운트에서는 모든 사진 쓰기가 실패하고, NFS 같은
+네트워크 파일시스템에서는 flock이 프로세스 사이 직렬화를 보장하지 않는다.
+
 ```bash
 bash scripts/ci.sh
 ```
