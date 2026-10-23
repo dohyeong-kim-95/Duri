@@ -16,6 +16,7 @@ from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from duri_api import timeline_index as _timeline_index
+from duri_api.timeline import SUPPORTED_SCHEMA_VERSIONS, is_supported_schema_version
 
 JsonObject = dict[str, Any]
 PathHook = Callable[[Path, Path], None]
@@ -362,12 +363,13 @@ class DuriStorageWriter:
         metadata_path = self._metadata_path(period)
         if metadata_path.exists():
             metadata = cast(JsonObject, json.loads(metadata_path.read_text(encoding="utf-8")))
-            # Refuse to modify files that are not RFC 0001 metadata (e.g. the Bubblelab
-            # sink format). See docs/adr/ADR-009 (Proposed).
-            if "schema_version" not in metadata:
+            # Refuse to modify files that are not RFC 0001 v1 metadata (e.g. the
+            # Bubblelab sink format, or a future version). See docs/rfc/0002 (Draft).
+            schema_version = metadata.get("schema_version")
+            if not is_supported_schema_version(schema_version):
                 raise StorageWriteError(
-                    f"{metadata_path} has no schema_version; refusing to write to a "
-                    "non-RFC-0001 metadata.json (see docs/adr/ADR-009)"
+                    f"{metadata_path} has schema_version {schema_version!r}, supported: "
+                    f"{SUPPORTED_SCHEMA_VERSIONS}; refusing to write (see docs/rfc/0002)"
                 )
             metadata.setdefault("participants", self._participants_payload())
             metadata.setdefault("logs", [])

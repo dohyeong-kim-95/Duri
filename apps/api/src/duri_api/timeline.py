@@ -10,6 +10,23 @@ JsonObject = dict[str, Any]
 
 logger = logging.getLogger(__name__)
 
+# metadata.json schema versions this code can read and write (RFC 0001).
+SUPPORTED_SCHEMA_VERSIONS = (1,)
+
+
+def is_supported_schema_version(value: object) -> bool:
+    """Check a metadata.json "schema_version" value.
+
+    Args:
+        value: The raw value (may be missing, a string, a future version, ...).
+
+    Returns:
+        True only for an int listed in SUPPORTED_SCHEMA_VERSIONS ("1", 2, true → False).
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        return False
+    return value in SUPPORTED_SCHEMA_VERSIONS
+
 
 def read_timeline_logs(
     storage_root: Path | None,
@@ -98,12 +115,15 @@ def _read_metadata_files(storage_root: Path) -> list[JsonObject]:
         loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
         if not isinstance(loaded, dict):
             continue
-        # Files without schema_version (e.g. the Bubblelab sink's {month, logs[seq, at]}
-        # format) are not RFC 0001 metadata. Skip them until the format decision
-        # in docs/adr/ADR-009 is made.
-        if "schema_version" not in loaded:
+        # Files without a supported schema_version (e.g. the Bubblelab sink's
+        # {month, logs[seq, at]} format, or a future version) are not RFC 0001 v1
+        # metadata. Skip them until the format decision in docs/rfc/0002 is made.
+        if not is_supported_schema_version(loaded.get("schema_version")):
             logger.warning(
-                "skipping %s: no schema_version, not an RFC 0001 metadata.json", metadata_path
+                "skipping %s: schema_version %r is not supported %s",
+                metadata_path,
+                loaded.get("schema_version"),
+                SUPPORTED_SCHEMA_VERSIONS,
             )
             continue
         metadata.append(cast(JsonObject, loaded))

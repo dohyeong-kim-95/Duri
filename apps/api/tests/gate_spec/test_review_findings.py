@@ -525,3 +525,46 @@ def test_r_h5_2_writer_refuses_metadata_without_schema_version(tmp_path: Path) -
         )
 
     assert metadata_path.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.gate_spec(
+    'R-H5-3. `schema_version`이 지원 버전(1)이 아니면(미래 버전 `2`, 문자열 `"1"` 등) reader는 건너뛰고 writer는 쓰기를 거부한다.'
+)
+@pytest.mark.parametrize("schema_version", [2, "1", True])
+def test_r_h5_3_unsupported_schema_version_is_skipped_and_refused(
+    tmp_path: Path,
+    schema_version: object,
+) -> None:
+    """R-H5-3. `schema_version`이 지원 버전(1)이 아니면(미래 버전 `2`, 문자열 `"1"` 등) reader는 건너뛰고 writer는 쓰기를 거부한다."""
+    write_raw_metadata(
+        tmp_path,
+        "2026-07",
+        {
+            "schema_version": schema_version,
+            "period": "2026-07",
+            "timezone": "Asia/Seoul",
+            "participants": {},
+            "logs": [
+                {
+                    "id": "01J_MSG_FUTURE",
+                    "type": "Message",
+                    "created_at": "2026-07-01T10:00:00+09:00",
+                    "actor_id": "01J_USER_1",
+                    "payload": {"text": "future"},
+                }
+            ],
+        },
+    )
+    metadata_path = tmp_path / "timeline" / "2026" / "2026-07" / "metadata.json"
+    before = metadata_path.read_text(encoding="utf-8")
+
+    assert read_timeline_logs(tmp_path) == []
+    with pytest.raises(StorageWriteError, match="schema_version"):
+        make_writer(tmp_path).append_message(
+            log_id="01J_MSG_R_H5_3",
+            actor_id="01J_USER_1",
+            created_at=dt("2026-07-12T19:28:00+09:00"),
+            message_id="01J_MESSAGE_R_H5_3",
+            text="v1 writer must not touch this file",
+        )
+    assert metadata_path.read_text(encoding="utf-8") == before
