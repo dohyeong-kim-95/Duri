@@ -32,7 +32,7 @@ def register_user(
     *,
     code: str = "invite-slot-1",
     slot: int = 1,
-    display_name: str = "Dohyeong",
+    display_name: str = "UserA",
     device_label: str = "phone",
 ) -> dict[str, Any]:
     auth.create_invite_code(code=code, intended_slot=slot)
@@ -95,10 +95,10 @@ def test_b1_1_valid_invite_code_registers_user(tmp_path: Path) -> None:
     """B1-1. 유효한 초대 코드로 사용자 등록에 성공한다."""
     auth = make_auth(tmp_path)
 
-    result = register_user(auth, code="valid-invite", slot=1, display_name="Dohyeong")
+    result = register_user(auth, code="valid-invite", slot=1, display_name="UserA")
 
     assert result["user"]["slot"] == 1
-    assert result["user"]["display_name"] == "Dohyeong"
+    assert result["user"]["display_name"] == "UserA"
     assert result["access_token"]
     assert result["refresh_token"]
 
@@ -112,7 +112,7 @@ def test_b1_2_consumed_invite_code_cannot_register_again(tmp_path: Path) -> None
     with pytest.raises(AuthError):
         auth.register_with_invite(
             code="one-time-invite",
-            display_name="Partner",
+            display_name="UserB",
             device_label="second-phone",
             device_fingerprint="second-fingerprint",
         )
@@ -127,7 +127,7 @@ def test_b1_3_no_third_user_can_be_created_after_two_slots_are_registered(
     """B1-3. 두 슬롯이 모두 등록된 상태에서는 어떤 경로로도 세 번째 사용자를 만들 수 없다."""
     auth = make_auth(tmp_path)
     register_user(auth, code="slot-1", slot=1)
-    register_user(auth, code="slot-2", slot=2, display_name="Partner", device_label="partner")
+    register_user(auth, code="slot-2", slot=2, display_name="UserB", device_label="partner")
     auth.create_invite_code(code="third-attempt", intended_slot=1)
 
     with pytest.raises(AuthError):

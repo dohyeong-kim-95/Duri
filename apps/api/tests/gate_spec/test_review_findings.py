@@ -18,8 +18,8 @@ from duri_api.storage import (
 from duri_api.timeline import read_timeline_logs, read_timeline_summary
 
 PARTICIPANTS = {
-    "01J_USER_1": "Dohyeong",
-    "01J_USER_2": "Partner",
+    "01J_USER_1": "UserA",
+    "01J_USER_2": "UserB",
 }
 
 

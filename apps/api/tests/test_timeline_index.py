@@ -11,8 +11,8 @@ from duri_api.timeline_index import (
 )
 
 PARTICIPANTS = {
-    "01J_USER_1": "Dohyeong",
-    "01J_USER_2": "Partner",
+    "01J_USER_1": "UserA",
+    "01J_USER_2": "UserB",
 }
 
 
@@ -61,7 +61,7 @@ def test_index_returns_full_timeline_logs_with_filters(tmp_path: Path) -> None:
 
     assert [item["id"] for item in indexed] == ["01J_MSG_JULY"]
     assert indexed[0]["payload"]["text"] == "7월 메시지"
-    assert indexed[0]["actor_display_name"] == "Dohyeong"
+    assert indexed[0]["actor_display_name"] == "UserA"
     assert indexed[0]["period"] == "2026-07"
 
 

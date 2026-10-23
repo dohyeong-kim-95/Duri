@@ -103,10 +103,10 @@ Shape:
   "timezone": "Asia/Seoul",
   "participants": {
     "01J_USER_1": {
-      "display_name": "Dohyeong"
+      "display_name": "UserA"
     },
     "01J_USER_2": {
-      "display_name": "Partner"
+      "display_name": "UserB"
     }
   },
   "logs": [
@@ -150,7 +150,7 @@ Example:
 
 ## 2026-07-12
 
-19:28 — Dohyeong
+19:28 — UserA
 : 오늘 저녁 뭐 먹을까?
 ```
 

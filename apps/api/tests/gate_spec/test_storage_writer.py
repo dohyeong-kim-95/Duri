@@ -18,8 +18,8 @@ from duri_api.storage import (
 )
 
 PARTICIPANTS = {
-    "01J_USER_1": "Dohyeong",
-    "01J_USER_2": "Partner",
+    "01J_USER_1": "UserA",
+    "01J_USER_2": "UserB",
 }
 
 
@@ -325,8 +325,8 @@ def test_a3_3_metadata_contains_participant_display_names(tmp_path: Path) -> Non
 
     metadata = read_metadata(tmp_path, "2026-07")
     assert metadata["participants"] == {
-        "01J_USER_1": {"display_name": "Dohyeong"},
-        "01J_USER_2": {"display_name": "Partner"},
+        "01J_USER_1": {"display_name": "UserA"},
+        "01J_USER_2": {"display_name": "UserB"},
     }
 
 
@@ -494,6 +494,6 @@ def test_a5_4_mixed_timezone_logs_are_normalized_and_sorted_in_app_timezone(
     messages = (tmp_path / "timeline" / "2026" / "2026-07" / "messages.md").read_text(
         encoding="utf-8"
     )
-    assert "19:28 — Dohyeong\n: 먼저 온 KST 메시지" in messages
-    assert "19:28 — Partner\n: 1초 뒤 UTC 메시지" in messages
+    assert "19:28 — UserA\n: 먼저 온 KST 메시지" in messages
+    assert "19:28 — UserB\n: 1초 뒤 UTC 메시지" in messages
     assert "10:28" not in messages

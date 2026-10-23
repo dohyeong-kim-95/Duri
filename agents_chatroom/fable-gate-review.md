@@ -443,7 +443,7 @@ Amended 주석 유지 가능). (c) ADR 인덱스에 ADR-008 추가.
 
 DATA_MODEL v0.4 §10은 "`User`/`Device` 표시 목록, 기기 라벨, 폐기 상태
 요약도 Export에 포함하지 않는다"고 정했다. 그런데 Export 안의
-`messages.md`(RFC 0001 §5 예시)는 "19:28 — Dohyeong"처럼 **발화자 이름을
+`messages.md`(RFC 0001 §5 예시)는 "19:28 — UserA"처럼 **발화자 이름을
 렌더링**하고, canonical `metadata.json`은 `actor_id` ULID만 저장한다.
 
 이 규칙을 엄격히 따르면 50년 뒤 아카이브에는 발화자가 ULID로만 남아

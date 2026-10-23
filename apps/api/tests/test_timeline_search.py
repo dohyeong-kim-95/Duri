@@ -12,8 +12,8 @@ from duri_api.main import create_app
 from duri_api.storage import DuriStorageWriter
 
 PARTICIPANTS = {
-    "01J_USER_1": "Dohyeong",
-    "01J_USER_2": "Partner",
+    "01J_USER_1": "UserA",
+    "01J_USER_2": "UserB",
 }
 
 
@@ -30,7 +30,7 @@ def make_auth(tmp_path: Path) -> dict[str, Any]:
     auth.create_invite_code(code="timeline-invite", intended_slot=1)
     session = auth.register_with_invite(
         code="timeline-invite",
-        display_name="Dohyeong",
+        display_name="UserA",
         device_label="phone",
         device_fingerprint="phone-fingerprint",
     )
@@ -88,8 +88,8 @@ def test_timeline_endpoint_reads_logs_from_duri_storage(tmp_path: Path) -> None:
     assert response.status_code == 200
     items = response.json()["items"]
     assert [item["id"] for item in items] == ["01J_MSG_FIRST", "01J_MSG_SECOND"]
-    assert items[0]["actor_display_name"] == "Dohyeong"
-    assert items[1]["actor_display_name"] == "Partner"
+    assert items[0]["actor_display_name"] == "UserA"
+    assert items[1]["actor_display_name"] == "UserB"
 
 
 def test_timeline_endpoint_filters_by_period_and_type(tmp_path: Path) -> None:
