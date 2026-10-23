@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from duri_api import timeline_index
+from duri_api import storage, timeline_index
 from duri_api.storage import (
     DuriStorageWriter,
     StorageWriteError,
@@ -342,7 +342,9 @@ def test_r_h3_2_existing_identical_photo_file_is_reused(tmp_path: Path) -> None:
     photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
     photos_dir.mkdir(parents=True)
     # Simulates a crash after the photo rename but before metadata.json was written.
-    (photos_dir / "2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg").write_bytes(b"same bytes")
+    existing_file = photos_dir / "2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg"
+    existing_file.write_bytes(b"same bytes")
+    inode_before = existing_file.stat().st_ino
 
     result = make_writer(tmp_path).append_photo(
         log_id="01J_PHOTO_R_H3_2",
@@ -357,6 +359,46 @@ def test_r_h3_2_existing_identical_photo_file_is_reused(tmp_path: Path) -> None:
     assert [path.name for path in photos_dir.iterdir()] == [
         "2026-07-12T19-30-22_01J_PHOTO_R_H3_2.jpg"
     ]
+    # Same inode: the existing file was referenced, not replaced by a new copy.
+    assert existing_file.stat().st_ino == inode_before
+
+
+@pytest.mark.gate_spec(
+    "R-H3-3. 이름 확인과 저장 사이에 다른 프로세스가 같은 사진 파일명을 먼저 만들어도 그 원본은 덮어써지지 않고, 새 사진은 다른 이름으로 저장된다."
+)
+def test_r_h3_3_photo_created_by_another_process_between_check_and_publish_is_kept(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R-H3-3. 이름 확인과 저장 사이에 다른 프로세스가 같은 사진 파일명을 먼저 만들어도 그 원본은 덮어써지지 않고, 새 사진은 다른 이름으로 저장된다."""
+    original_available_photo_path = storage._available_photo_path
+    raced_paths: list[Path] = []
+
+    def available_path_then_race(
+        photos_dir: Path, filename: str, photo_bytes: bytes
+    ) -> tuple[Path, bool]:
+        candidate, already_stored = original_available_photo_path(photos_dir, filename, photo_bytes)
+        if not raced_paths and not already_stored:
+            # Another process publishes its own photo under the same name right now.
+            candidate.write_bytes(b"other process original")
+            raced_paths.append(candidate)
+        return candidate, already_stored
+
+    monkeypatch.setattr(storage, "_available_photo_path", available_path_then_race)
+
+    result = make_writer(tmp_path).append_photo(
+        log_id="01J_PHOTO_R_H3_3",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-12T19:30:22+09:00"),
+        photo_bytes=b"this process original",
+        original_filename="race.jpg",
+        mime_type="image/jpeg",
+    )
+
+    assert raced_paths[0].read_bytes() == b"other process original"
+    stored_path = tmp_path / result["media_ref"]["storage_path"]
+    assert stored_path != raced_paths[0]
+    assert stored_path.read_bytes() == b"this process original"
 
 
 @pytest.mark.gate_spec(

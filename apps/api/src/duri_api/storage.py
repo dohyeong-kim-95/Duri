@@ -6,6 +6,7 @@ import logging
 import mimetypes
 import os
 import re
+import secrets
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ PathHook = Callable[[Path, Path], None]
 MessagesHook = Callable[[Path], None]
 
 SCHEMA_VERSION = 1
+MAX_PHOTO_NAME_ATTEMPTS = 100
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +123,7 @@ class DuriStorageWriter:
                 original_filename=original_filename,
                 mime_type=mime_type,
             )
-            final_path, already_stored = _available_photo_path(photos_dir, filename, photo_bytes)
-            if not already_stored:
-                self._write_photo_file(partition, final_path, photo_bytes)
+            final_path = self._write_photo_file(partition, photos_dir, filename, photo_bytes)
 
             media_ref = self._media_ref(
                 log_id=log_id,
@@ -157,28 +157,57 @@ class DuriStorageWriter:
             stored_log = self._append_log_locked(period, log)
             return _photo_result(stored_log)
 
-    def _write_photo_file(self, partition: Path, final_path: Path, photo_bytes: bytes) -> None:
-        """Write photo bytes via temp file, verify, then atomically rename into place.
+    def _write_photo_file(
+        self,
+        partition: Path,
+        photos_dir: Path,
+        filename: str,
+        photo_bytes: bytes,
+    ) -> Path:
+        """Store photo bytes in photos/ without ever overwriting an existing original.
+
+        The bytes go to a temp file (unique per process and call), are fsynced and
+        verified, and are then published with os.link. os.link fails with
+        FileExistsError if another process created the name first, so the check and
+        the publish are one atomic step across processes. On that error the name is
+        picked again (same sha256 → reuse, different → "_2", "_3", ...).
 
         Args:
             partition: Month partition directory (temp file lives here).
-            final_path: Destination path in photos/. Must not exist yet.
+            photos_dir: The partition's photos/ directory.
+            filename: Preferred filename from _photo_filename.
             photo_bytes: Original uploaded bytes.
 
         Returns:
-            None. Raises StorageWriteError if anything fails before the rename.
+            Path of the stored photo (new, or an existing file with the same bytes).
+            Raises StorageWriteError if anything fails before the file is published.
         """
-        temp_path = partition / f".{final_path.name}.tmp"
+        unique_suffix = f"{os.getpid()}.{secrets.token_hex(4)}"
+        temp_path = partition / f".{filename}.{unique_suffix}.tmp"
         try:
             _write_bytes_durable(temp_path, photo_bytes)
             if self.hooks.before_media_rename is not None:
-                self.hooks.before_media_rename(temp_path, final_path)
+                self.hooks.before_media_rename(temp_path, photos_dir / filename)
             _verify_file_matches_bytes(temp_path, photo_bytes)
-            os.replace(temp_path, final_path)
-            _fsync_directory(final_path.parent)
+
+            for _attempt in range(MAX_PHOTO_NAME_ATTEMPTS):
+                final_path, already_stored = _available_photo_path(
+                    photos_dir, filename, photo_bytes
+                )
+                if already_stored:
+                    return final_path
+                try:
+                    os.link(temp_path, final_path)
+                except FileExistsError:
+                    # Another writer took this name between the check and the link.
+                    continue
+                _fsync_directory(photos_dir)
+                return final_path
+            raise StorageWriteError(f"no free photo filename for {filename}")
         except Exception as exc:
+            raise StorageWriteError("photo write failed before atomic publish") from exc
+        finally:
             temp_path.unlink(missing_ok=True)
-            raise StorageWriteError("photo write failed before atomic rename") from exc
 
     def regenerate_messages(self, period: str) -> str:
         partition = self._partition_path(period)
