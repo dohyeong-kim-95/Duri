@@ -34,7 +34,11 @@ npm test
 echo "==> Preparing backend environment"
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e "apps/api[dev]"
+# Pinned, hash-checked dependencies; refresh with:
+#   uv pip compile apps/api/pyproject.toml --extra dev --python-version 3.11 \
+#     --universal --generate-hashes -o apps/api/requirements-dev.lock
+python -m pip install -r apps/api/requirements-dev.lock
+python -m pip install --no-deps -e "apps/api[dev]"
 
 echo "==> Linting backend"
 ruff check apps/api
