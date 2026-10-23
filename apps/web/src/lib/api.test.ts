@@ -123,7 +123,7 @@ describe("API endpoint configuration", () => {
   });
 
   it("formats and summarizes timeline logs for display", () => {
-    expect(formatTimelineTime("2026-07-12T19:28:00+09:00")).toMatch(/\d{2}:\d{2}/);
+    expect(formatTimelineTime("2026-07-12T19:28:00+09:00")).toBe("2026-07-12 19:28");
     expect(
       summarizeTimelineLog({
         id: "01J_MSG",
@@ -142,5 +142,17 @@ describe("API endpoint configuration", () => {
         media_refs: [{ original_filename: "dinner.jpg" }],
       }),
     ).toBe("Photo: dinner.jpg");
+  });
+});
+
+describe("Timeline time formatting", () => {
+  it("keeps the stored date and app-timezone time instead of the browser timezone", () => {
+    expect(formatTimelineTime("2026-07-31T23:59:00+09:00")).toBe("2026-07-31 23:59");
+    expect(formatTimelineTime("2026-08-01T00:00:00+09:00")).toBe("2026-08-01 00:00");
+  });
+
+  it("falls back for values that are not ISO datetimes", () => {
+    expect(formatTimelineTime("")).toBe("--:--");
+    expect(formatTimelineTime("yesterday")).toBe("--:--");
   });
 });

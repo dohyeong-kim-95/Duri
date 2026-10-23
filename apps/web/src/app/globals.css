@@ -174,7 +174,7 @@ input:disabled {
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 136px minmax(0, 1fr);
   gap: 18px;
   border-bottom: 1px solid #e4e4df;
   padding: 16px 20px;
@@ -238,8 +238,8 @@ input:disabled {
   }
 
   .timeline-item {
-    grid-template-columns: 56px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
     padding: 15px 18px;
   }
 }

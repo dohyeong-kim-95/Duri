@@ -138,16 +138,14 @@ export async function searchTimeline({
   });
 }
 
+// Shows the date and time exactly as stored (already in the app timezone), so the
+// Timeline does not depend on the browser's timezone and different days are told apart.
 export function formatTimelineTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
+  if (!match) {
     return "--:--";
   }
-  return new Intl.DateTimeFormat("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
+  return `${match[1]} ${match[2]}`;
 }
 
 export function summarizeTimelineLog(log: TimelineLog): string {
