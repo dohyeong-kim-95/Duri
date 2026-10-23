@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 from collections.abc import Callable
@@ -17,6 +18,7 @@ import httpx
 import pytest
 from fastapi import FastAPI, WebSocketDisconnect
 
+from duri_api import auth as auth_module
 from duri_api import recover
 from duri_api.auth import AuthError, AuthService
 from duri_api.main import app as default_app
@@ -461,3 +463,21 @@ def test_l3_failed_messages_md_write_keeps_the_previous_file_whole(
     assert messages_path.read_text(encoding="utf-8") == before
     assert list(partition_path(tmp_path, "2026-07").glob("*.tmp")) == []
     assert len(read_metadata(tmp_path, "2026-07")["logs"]) == 2  # type: ignore[arg-type]
+
+
+def test_l6_refresh_updates_device_last_seen_at(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(auth_module, "_now", lambda: 1_000_000.0)
+    auth = make_auth(tmp_path)
+    registered = register_user_a(auth)
+
+    monkeypatch.setattr(auth_module, "_now", lambda: 2_000_000.0)
+    auth.refresh_access_token(registered["refresh_token"])
+
+    with sqlite3.connect(auth.db_path) as connection:
+        last_seen_at = connection.execute(
+            "SELECT last_seen_at FROM devices WHERE id = ?", (registered["device"]["id"],)
+        ).fetchone()[0]
+    assert last_seen_at == 2_000_000.0

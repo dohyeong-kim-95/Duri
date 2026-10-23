@@ -281,6 +281,10 @@ class AuthService:
                 "UPDATE sessions SET last_used_at = ? WHERE id = ?",
                 (now, row["session_id"]),
             )
+            connection.execute(
+                "UPDATE devices SET last_seen_at = ? WHERE id = ?",
+                (now, row["device_id"]),
+            )
             connection.commit()
 
         access_token = self.issue_access_token(
