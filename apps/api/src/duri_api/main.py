@@ -84,6 +84,13 @@ async def handle_timeline_websocket(
     try:
         while True:
             message = await websocket.receive_json()
+            # Re-check on every message so revoking a device also cuts open sockets.
+            try:
+                auth_service.assert_active_identity(identity)
+            except AuthError:
+                await websocket.close(code=1008, reason="session revoked")
+                return
+
             if message.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
                 continue

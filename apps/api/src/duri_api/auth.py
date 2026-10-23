@@ -403,6 +403,17 @@ class AuthService:
         if slot_user is not None:
             raise AuthError("slot already registered")
 
+    def assert_active_identity(self, identity: AuthIdentity) -> None:
+        """Check that an already validated identity is still active (not revoked/expired).
+
+        Args:
+            identity: Identity from validate_access_token.
+
+        Returns:
+            None. Raises AuthError if the user, device or session is no longer active.
+        """
+        self._assert_active_identity(identity)
+
     def _assert_active_identity(self, identity: AuthIdentity) -> None:
         with self._connect() as connection:
             row = _one(

@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from fastapi import WebSocketDisconnect
 
 from duri_api import recover
 from duri_api.auth import AuthError, AuthService
+from duri_api.main import handle_timeline_websocket
 from duri_api.storage import DuriStorageWriter, StorageWriteError
 from duri_api.timeline import (
     read_timeline_logs,
@@ -329,3 +334,46 @@ def test_m7_revoked_device_can_register_again_without_reviving_old_sessions(
             device_label="phone copy",
             device_fingerprint="fingerprint-phone",
         )
+
+
+def make_revoking_websocket(access_token: str, revoke: Callable[[], None]) -> SimpleNamespace:
+    """Fake socket (no class): two pings, and the device is revoked before the second."""
+    state = SimpleNamespace(received_count=0, sent=[], closed=None)
+
+    async def accept() -> None:
+        return None
+
+    async def close(code: int = 1000, reason: str | None = None) -> None:
+        state.closed = (code, reason)
+
+    async def send_json(data: Any) -> None:
+        state.sent.append(data)
+
+    async def receive_json() -> dict[str, Any]:
+        state.received_count += 1
+        if state.received_count == 2:
+            revoke()
+        if state.received_count > 2:
+            raise WebSocketDisconnect(code=1000)
+        return {"type": "ping"}
+
+    state.query_params = {"access_token": access_token}
+    state.accept = accept
+    state.close = close
+    state.send_json = send_json
+    state.receive_json = receive_json
+    return state
+
+
+def test_m8_open_timeline_websocket_is_closed_after_device_revocation(tmp_path: Path) -> None:
+    auth = make_auth(tmp_path)
+    registered = register_user_a(auth)
+
+    def revoke() -> None:
+        auth.revoke_device(registered["device"]["id"])
+
+    websocket = make_revoking_websocket(registered["access_token"], revoke)
+    asyncio.run(handle_timeline_websocket(websocket, auth))
+
+    assert [message["type"] for message in websocket.sent] == ["timeline.ready", "pong"]
+    assert websocket.closed == (1008, "session revoked")
