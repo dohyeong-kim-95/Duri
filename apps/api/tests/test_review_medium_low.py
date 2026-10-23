@@ -266,7 +266,7 @@ def test_m5_recovery_cli_recovers_orphans_in_every_partition(
     assert "2026-07: recovered 1" in capsys.readouterr().out
     assert len(read_metadata(tmp_path, "2026-07")["logs"]) == 2  # type: ignore[arg-type]
     assert len(read_metadata(tmp_path, "2026-08")["logs"]) == 1  # type: ignore[arg-type]
-    assert recover.recover_all_periods(tmp_path, "Asia/Seoul") == {}
+    assert recover.recover_all_periods(tmp_path, "Asia/Seoul") == ({}, {})
 
 
 def test_m6_search_matches_values_only_and_finds_quoted_text(tmp_path: Path) -> None:
@@ -515,3 +515,25 @@ def test_b1_recovery_uses_participants_known_from_another_month(tmp_path: Path) 
         "01J_USER_A": {"display_name": "UserA"},
         "01J_USER_B": {"display_name": "UserB"},
     }
+
+
+def test_b2_one_failing_partition_does_not_stop_recovery_of_the_others(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_raw_metadata(tmp_path, "2026-07", {"period": "2026-07", "logs": []})  # sink format
+    write_raw_metadata(tmp_path, "2026-08", {})
+    (partition_path(tmp_path, "2026-08") / "metadata.json").write_text("{broken", "utf-8")
+    for period in ("2026-07", "2026-08", "2026-09"):
+        photos_dir = partition_path(tmp_path, period) / "photos"
+        photos_dir.mkdir(parents=True, exist_ok=True)
+        (photos_dir / "IMG_0001.jpg").write_bytes(period.encode())
+
+    exit_code = recover.main(["--storage-root", str(tmp_path), "--timezone", "Asia/Seoul"])
+
+    assert exit_code == 1
+    output = capsys.readouterr()
+    assert "2026-09: recovered 1" in output.out
+    assert "2026-07: failed: StorageWriteError" in output.err
+    assert "2026-08: failed: JSONDecodeError" in output.err
+    assert len(read_metadata(tmp_path, "2026-09")["logs"]) == 1  # type: ignore[arg-type]

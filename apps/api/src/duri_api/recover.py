@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 
 from duri_api.storage import PERIOD_PATTERN, DuriStorageWriter
@@ -72,15 +73,22 @@ def load_known_participants(storage_root: Path) -> dict[str, str]:
     return {}
 
 
-def recover_all_periods(storage_root: Path, app_timezone: str) -> dict[str, int]:
+def recover_all_periods(
+    storage_root: Path,
+    app_timezone: str,
+) -> tuple[dict[str, int], dict[str, str]]:
     """Re-register orphan photos in every partition (photos/ files not in metadata.json).
+
+    A failing partition (e.g. sink format or broken metadata.json) is skipped so
+    the other partitions are still recovered.
 
     Args:
         storage_root: DuriStorage root directory.
         app_timezone: App timezone of the writer, e.g. "Asia/Seoul".
 
     Returns:
-        Number of recovered Logs per period (only periods with at least one).
+        (recovered_counts, failed_periods): number of recovered Logs per period
+        (only periods with at least one), and the error message per failed period.
     """
     # A partition created here gets the participants known from other months;
     # existing partitions keep their own.
@@ -90,11 +98,16 @@ def recover_all_periods(storage_root: Path, app_timezone: str) -> dict[str, int]
         app_timezone=app_timezone,
     )
     recovered_counts: dict[str, int] = {}
+    failed_periods: dict[str, str] = {}
     for period in list_periods(storage_root):
-        recovered = writer.recover_orphan_media(period)
+        try:
+            recovered = writer.recover_orphan_media(period)
+        except Exception as exc:
+            failed_periods[period] = f"{type(exc).__name__}: {exc}"
+            continue
         if recovered:
             recovered_counts[period] = len(recovered)
-    return recovered_counts
+    return recovered_counts, failed_periods
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -113,12 +126,17 @@ def main(argv: list[str] | None = None) -> int:
     if not arguments.storage_root:
         parser.error("--storage-root or DURI_STORAGE_ROOT is required")
 
-    recovered_counts = recover_all_periods(Path(arguments.storage_root), arguments.timezone)
-    if not recovered_counts:
-        print("no orphan media found")
-        return 0
+    recovered_counts, failed_periods = recover_all_periods(
+        Path(arguments.storage_root), arguments.timezone
+    )
     for period, count in recovered_counts.items():
         print(f"{period}: recovered {count}")
+    for period, error in failed_periods.items():
+        print(f"{period}: failed: {error}", file=sys.stderr)
+    if failed_periods:
+        return 1
+    if not recovered_counts:
+        print("no orphan media found")
     return 0
 
 
