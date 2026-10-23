@@ -221,6 +221,19 @@ Orphan media 복구(사진 rename 뒤 `metadata.json` 쓰기 전에 끊긴 경�
 `--timezone`을 생략하면 서버와 같은 `DURI_APP_TIMEZONE`(기본 `Asia/Seoul`)을 쓴다.
 서버와 다른 값을 주면 새로 만든 달이 다른 timezone으로 기록돼 서버가 그 달에 쓰지 못한다.
 
+### `DURI_APP_TIMEZONE`을 바꿀 때
+
+각 달의 `metadata.json`에는 그 달을 처음 만든 timezone이 `"timezone"`으로 박힌다. writer는
+이 값이 자기 timezone 이름과 **문자열로** 다르면 그 달에 쓰기를 거부한다(한 파일에 오프셋이
+섞이지 않게). 오프셋이 같은 다른 이름(`Asia/Seoul` → `Asia/Tokyo`)도 거부된다. 그래서
+timezone 변경은 **다음 달부터** 적용하는 것으로 한다.
+
+1. 월말에 서버를 멈춘다.
+2. 새 달의 첫 기록이 생기기 전에 `DURI_APP_TIMEZONE`을 바꾸고 서버를 다시 띄운다.
+   새 달은 새 timezone으로 만들어진다.
+3. 지난 달들은 옛 timezone 그대로 남는다. 읽기(Timeline·검색·복구)는 그대로 되지만, 지난 달
+   시각의 새 기록은 거부된다. 지난 달을 새 timezone으로 옮기는 도구는 아직 없다.
+
 ## Ownership
 
 모든 데이터와 코드는 우리 둘만을 위한 것이다. 공개 서비스나 수익화를
