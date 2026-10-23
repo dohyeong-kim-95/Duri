@@ -12,12 +12,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import httpx
 import pytest
-from fastapi import WebSocketDisconnect
+from fastapi import FastAPI, WebSocketDisconnect
 
 from duri_api import recover
 from duri_api.auth import AuthError, AuthService
-from duri_api.main import handle_timeline_websocket
+from duri_api.main import app as default_app
+from duri_api.main import create_app_from_env, handle_timeline_websocket
 from duri_api.storage import DuriStorageWriter, StorageWriteError
 from duri_api.timeline import (
     read_timeline_logs,
@@ -377,3 +379,61 @@ def test_m8_open_timeline_websocket_is_closed_after_device_revocation(tmp_path: 
 
     assert [message["type"] for message in websocket.sent] == ["timeline.ready", "pong"]
     assert websocket.closed == (1008, "session revoked")
+
+
+def valid_env(tmp_path: Path) -> dict[str, str]:
+    return {
+        "DURI_STORAGE_ROOT": str(tmp_path / "DuriStorage"),
+        "DURI_AUTH_DB": str(tmp_path / "auth" / "auth.sqlite3"),
+        "DURI_JWT_SECRET": "j" * 32,
+        "DURI_HASH_SECRET": "h" * 32,
+        "DURI_CORS_ORIGINS": "https://example.test, http://localhost:3000",
+    }
+
+
+async def get_timeline(app: FastAPI, access_token: str | None) -> httpx.Response:
+    headers = {}
+    if access_token is not None:
+        headers["Authorization"] = f"Bearer {access_token}"
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        return await client.get("/timeline", headers=headers)
+
+
+def test_m9_app_from_env_wires_auth_and_storage(tmp_path: Path) -> None:
+    environ = valid_env(tmp_path)
+    append_text(
+        make_writer(Path(environ["DURI_STORAGE_ROOT"])),
+        "01J_MSG_ENV",
+        "2026-07-12T10:00:00+09:00",
+        "env",
+    )
+    app = create_app_from_env(environ)
+    auth = AuthService(
+        db_path=Path(environ["DURI_AUTH_DB"]),
+        jwt_secret=environ["DURI_JWT_SECRET"],
+        hash_secret=environ["DURI_HASH_SECRET"],
+    )
+    registered = register_user_a(auth)
+
+    response = asyncio.run(get_timeline(app, registered["access_token"]))
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["items"]] == ["01J_MSG_ENV"]
+    assert asyncio.run(get_timeline(app, None)).status_code == 401
+
+
+def test_m9_default_app_denies_and_env_app_refuses_missing_or_weak_secrets(
+    tmp_path: Path,
+) -> None:
+    assert asyncio.run(get_timeline(default_app, None)).status_code == 401
+
+    environ = valid_env(tmp_path)
+    del environ["DURI_AUTH_DB"]
+    with pytest.raises(ValueError, match="DURI_AUTH_DB"):
+        create_app_from_env(environ)
+
+    environ = valid_env(tmp_path)
+    environ["DURI_JWT_SECRET"] = "short"
+    with pytest.raises(ValueError, match="at least 32 bytes"):
+        create_app_from_env(environ)

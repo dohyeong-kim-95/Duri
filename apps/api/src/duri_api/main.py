@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
@@ -16,6 +17,9 @@ from duri_api.timeline import (
 )
 
 APP_VERSION = "0.1.0"
+DEFAULT_CORS_ORIGINS = ["http://localhost:3000"]
+MIN_SECRET_BYTES = 32
+REQUIRED_ENV_VARS = ("DURI_STORAGE_ROOT", "DURI_AUTH_DB", "DURI_JWT_SECRET", "DURI_HASH_SECRET")
 
 
 class ProbeWebSocket(Protocol):
@@ -103,12 +107,13 @@ async def handle_timeline_websocket(
 def create_app(
     auth_service: AuthService | None = None,
     storage_root: Path | None = None,
+    cors_origins: list[str] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Duri API", version=APP_VERSION)
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000"],
+        allow_origins=cors_origins if cors_origins is not None else DEFAULT_CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
@@ -184,4 +189,53 @@ def create_app(
     return app
 
 
+def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
+    """Build the real app from environment variables.
+
+    Run with: uvicorn --factory duri_api.main:create_app_from_env
+
+    Variables:
+        DURI_STORAGE_ROOT: DuriStorage directory (required).
+        DURI_AUTH_DB: auth SQLite path, outside DuriStorage (required).
+        DURI_JWT_SECRET: token signing key, at least 32 bytes (required).
+        DURI_HASH_SECRET: hash key, at least 32 bytes, different from the signing key
+            (required).
+        DURI_CORS_ORIGINS: comma-separated allowed origins (default localhost:3000).
+
+    Args:
+        environ: Variables to read (None reads os.environ).
+
+    Returns:
+        The configured FastAPI app. Raises ValueError if a variable is missing or weak.
+    """
+    if environ is None:
+        environ = os.environ
+
+    missing = [name for name in REQUIRED_ENV_VARS if not environ.get(name)]
+    if missing:
+        raise ValueError(f"missing required environment variables: {', '.join(missing)}")
+
+    for name in ("DURI_JWT_SECRET", "DURI_HASH_SECRET"):
+        if len(environ[name].encode("utf-8")) < MIN_SECRET_BYTES:
+            raise ValueError(f"{name} must be at least {MIN_SECRET_BYTES} bytes")
+
+    cors_origins = DEFAULT_CORS_ORIGINS
+    cors_text = environ.get("DURI_CORS_ORIGINS", "")
+    if cors_text.strip():
+        cors_origins = [origin.strip() for origin in cors_text.split(",") if origin.strip()]
+
+    auth_service = AuthService(
+        db_path=Path(environ["DURI_AUTH_DB"]),
+        jwt_secret=environ["DURI_JWT_SECRET"],
+        hash_secret=environ["DURI_HASH_SECRET"],
+    )
+    return create_app(
+        auth_service=auth_service,
+        storage_root=Path(environ["DURI_STORAGE_ROOT"]),
+        cors_origins=cors_origins,
+    )
+
+
+# Unconfigured default: every data endpoint answers 401 (deny by default).
+# Use create_app_from_env for a real server.
 app = create_app()
