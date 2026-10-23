@@ -443,6 +443,42 @@ def test_r_h4_2_orphan_from_writer_filename_keeps_created_at_and_log_id(
     assert manual["created_at"] == "2026-07-01T00:00:00+09:00"
 
 
+@pytest.mark.gate_spec(
+    "R-H4-3. orphan 파일명의 시각은 그 파티션 `metadata.json`의 timezone으로 해석하고, log_id가 이미 쓰이고 있어도 파일명의 시각은 유지한다."
+)
+def test_r_h4_3_orphan_time_uses_partition_timezone_and_survives_id_collision(
+    tmp_path: Path,
+) -> None:
+    """R-H4-3. orphan 파일명의 시각은 그 파티션 `metadata.json`의 timezone으로 해석하고, log_id가 이미 쓰이고 있어도 파일명의 시각은 유지한다."""
+    seoul_writer = make_writer(tmp_path)
+    seoul_writer.append_photo(
+        log_id="01J_PHOTO_TAKEN",
+        actor_id="01J_USER_1",
+        created_at=dt("2026-07-25T10:00:00+09:00"),
+        photo_bytes=b"stored",
+        original_filename="stored.jpg",
+        mime_type="image/jpeg",
+    )
+    photos_dir = tmp_path / "timeline" / "2026" / "2026-07" / "photos"
+    # Written by the Seoul writer before a crash, recovered by a UTC writer later.
+    (photos_dir / "2026-07-25T11-00-00_01J_PHOTO_KST.jpg").write_bytes(b"kst orphan")
+    # Crash, then a retry with re-encoded bytes took the same id under "_2".
+    (photos_dir / "2026-07-26T08-00-00_01J_PHOTO_TAKEN.jpg").write_bytes(b"first try")
+    utc_writer = DuriStorageWriter(
+        storage_root=tmp_path, participants=PARTICIPANTS, app_timezone="UTC"
+    )
+
+    recovered = utc_writer.recover_orphan_media("2026-07")
+
+    by_filename = {log["media_refs"][0]["original_filename"]: log for log in recovered}
+    kst = by_filename["2026-07-25T11-00-00_01J_PHOTO_KST.jpg"]
+    taken = by_filename["2026-07-26T08-00-00_01J_PHOTO_TAKEN.jpg"]
+    assert dt(kst["created_at"]) == dt("2026-07-25T02:00:00+00:00")
+    assert kst["created_at"] == "2026-07-25T11:00:00+09:00"
+    assert taken["id"].startswith("RECOVERED_")
+    assert taken["created_at"] == "2026-07-26T08:00:00+09:00"
+
+
 SINK_FORMAT_METADATA: dict[str, object] = {
     "month": "2026-07",
     "logs": [{"seq": 1, "at": 1752300000000, "name": "A", "type": "message", "text": "hi"}],

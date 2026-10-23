@@ -232,6 +232,7 @@ class DuriStorageWriter:
                 for media_ref in log.get("media_refs", [])
             }
             existing_ids = {log.get("id") for log in metadata["logs"]}
+            partition_timezone = _zone_or_default(metadata.get("timezone"), self._timezone)
             recovered: list[JsonObject] = []
 
             for media_path in sorted(path for path in photos_dir.iterdir() if path.is_file()):
@@ -244,15 +245,19 @@ class DuriStorageWriter:
 
                 # Prefer the original created_at and log_id from the writer's own
                 # filename; fall back to a path-based id and the period start.
+                # The filename time was written in the partition's timezone, which
+                # may differ from the current app timezone.
                 log_id = _recovered_log_id(relative_path)
                 created_at = self._period_start(period)
-                parsed = _parse_writer_photo_filename(media_path.name, self._timezone)
+                parsed = _parse_writer_photo_filename(media_path.name, partition_timezone)
                 if parsed is not None:
                     parsed_log_id, parsed_created_at = parsed
                     parsed_period = parsed_created_at.strftime("%Y-%m")
-                    if parsed_period == period and parsed_log_id not in existing_ids:
-                        log_id = parsed_log_id
+                    if parsed_period == period:
+                        # Keep the real time even when the id is already taken.
                         created_at = parsed_created_at
+                        if parsed_log_id not in existing_ids:
+                            log_id = parsed_log_id
 
                 media_ref = self._media_ref(
                     log_id=log_id,
@@ -270,6 +275,8 @@ class DuriStorageWriter:
                     created_at=created_at,
                     ingested_at=datetime.now(tz=self._timezone),
                 )
+                # Keep the partition's own offset so the file stays in one timezone.
+                log["created_at"] = _isoformat(created_at.astimezone(partition_timezone))
                 log["payload"] = {
                     "media_ref_id": media_ref["id"],
                     "caption": None,
@@ -645,6 +652,25 @@ def _relative_to_root(storage_root: Path, path: Path) -> str:
     return path.relative_to(storage_root).as_posix()
 
 
+def _zone_or_default(timezone_name: object, default: ZoneInfo) -> ZoneInfo:
+    """Build a ZoneInfo from a metadata.json "timezone" value.
+
+    Args:
+        timezone_name: The raw "timezone" value (may be missing or invalid).
+        default: Zone to use when the value cannot be used.
+
+    Returns:
+        The partition's zone, or default.
+    """
+    if not isinstance(timezone_name, str) or not timezone_name:
+        return default
+    try:
+        return ZoneInfo(timezone_name)
+    except (ValueError, KeyError):
+        logger.warning("unknown timezone %r in metadata.json; using %s", timezone_name, default)
+        return default
+
+
 def _recovered_log_id(relative_path: str) -> str:
     """Build a recovery Log id from the file's path, so two files never share an id.
 
@@ -671,7 +697,7 @@ def _parse_writer_photo_filename(
 
     Args:
         filename: e.g. "2026-07-25T21-10-00_01J_PHOTO.jpg".
-        timezone: App timezone the timestamp was written in.
+        timezone: Timezone the timestamp was written in (the partition's).
 
     Returns:
         (log_id, created_at), or None if the name does not match the pattern.
