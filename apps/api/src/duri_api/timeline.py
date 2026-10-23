@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
 JsonObject = dict[str, Any]
 
 logger = logging.getLogger(__name__)
+
+EARLIEST_AWARE_DATETIME = datetime.min.replace(tzinfo=UTC)
 
 # metadata.json schema versions this code can read and write (RFC 0001).
 SUPPORTED_SCHEMA_VERSIONS = (1,)
@@ -112,7 +114,12 @@ def _read_metadata_files(storage_root: Path) -> list[JsonObject]:
     metadata_files = sorted(storage_root.glob("timeline/*/*/metadata.json"))
     metadata: list[JsonObject] = []
     for metadata_path in metadata_files:
-        loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
+        # One broken (e.g. hand-edited) file must not take the whole Timeline down.
+        try:
+            loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            logger.warning("skipping %s: unreadable metadata.json", metadata_path, exc_info=True)
+            continue
         if not isinstance(loaded, dict):
             continue
         # Files without a supported schema_version (e.g. the Bubblelab sink's
@@ -163,13 +170,25 @@ def _sorted_logs(logs: list[JsonObject]) -> list[JsonObject]:
 
 
 def _sort_datetime(log: JsonObject) -> datetime:
+    """Sort key for a Log's created_at that never mixes naive and aware datetimes.
+
+    Args:
+        log: A Log (possibly hand-edited).
+
+    Returns:
+        The aware created_at. A missing or invalid value sorts first (aware
+        datetime.min); a value without offset is read as UTC.
+    """
     value = log.get("created_at")
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value)
-        except ValueError:
-            pass
-    return datetime.min
+    if not isinstance(value, str):
+        return EARLIEST_AWARE_DATETIME
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return EARLIEST_AWARE_DATETIME
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed
 
 
 def timeline_search_text(log: JsonObject) -> str:
