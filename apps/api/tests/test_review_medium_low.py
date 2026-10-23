@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable
@@ -437,3 +438,26 @@ def test_m9_default_app_denies_and_env_app_refuses_missing_or_weak_secrets(
     environ["DURI_JWT_SECRET"] = "short"
     with pytest.raises(ValueError, match="at least 32 bytes"):
         create_app_from_env(environ)
+
+
+def test_l3_failed_messages_md_write_keeps_the_previous_file_whole(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    writer = make_writer(tmp_path)
+    append_text(writer, "01J_MSG_FIRST", "2026-07-12T10:00:00+09:00", "first")
+    messages_path = partition_path(tmp_path, "2026-07") / "messages.md"
+    before = messages_path.read_text(encoding="utf-8")
+    real_replace = os.replace
+
+    def fail_messages_replace(source: Any, destination: Any) -> None:
+        if Path(destination).name == "messages.md":
+            raise OSError("simulated crash while publishing messages.md")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", fail_messages_replace)
+    append_text(writer, "01J_MSG_SECOND", "2026-07-12T11:00:00+09:00", "second")
+
+    assert messages_path.read_text(encoding="utf-8") == before
+    assert list(partition_path(tmp_path, "2026-07").glob("*.tmp")) == []
+    assert len(read_metadata(tmp_path, "2026-07")["logs"]) == 2  # type: ignore[arg-type]

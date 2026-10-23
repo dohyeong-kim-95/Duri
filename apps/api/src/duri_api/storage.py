@@ -453,12 +453,25 @@ class DuriStorageWriter:
         json.loads(metadata_path.read_text(encoding="utf-8"))
 
     def _write_messages(self, messages_path: Path, content: str) -> None:
+        """Write messages.md via temp file + rename, so a crash never leaves it cut off.
+
+        Args:
+            messages_path: Destination messages.md path.
+            content: Rendered Markdown.
+
+        Returns:
+            None. Raises StorageWriteError on failure (the old file stays as it was).
+        """
+        unique_suffix = f"{os.getpid()}.{secrets.token_hex(4)}"
+        temp_path = messages_path.with_name(f".{messages_path.name}.{unique_suffix}.tmp")
         try:
             if self.hooks.before_messages_write is not None:
                 self.hooks.before_messages_write(messages_path)
-            _write_text_durable(messages_path, content)
+            _write_text_durable(temp_path, content)
+            os.replace(temp_path, messages_path)
             _fsync_directory(messages_path.parent)
         except Exception as exc:
+            temp_path.unlink(missing_ok=True)
             raise StorageWriteError("messages.md regeneration failed") from exc
 
     def _base_log(
