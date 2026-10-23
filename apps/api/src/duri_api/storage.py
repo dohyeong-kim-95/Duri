@@ -10,13 +10,17 @@ import secrets
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from duri_api import timeline_index as _timeline_index
-from duri_api.timeline import SUPPORTED_SCHEMA_VERSIONS, is_supported_schema_version
+from duri_api.timeline import (
+    EARLIEST_AWARE_DATETIME,
+    SUPPORTED_SCHEMA_VERSIONS,
+    is_supported_schema_version,
+)
 
 JsonObject = dict[str, Any]
 PathHook = Callable[[Path, Path], None]
@@ -104,7 +108,7 @@ class DuriStorageWriter:
         lock = self._lock_for(period)
 
         with lock:
-            existing_log = _find_log_by_id(self._read_metadata(period)["logs"], log_id)
+            existing_log = _find_log_by_id(self._read_metadata_for_append(period)["logs"], log_id)
             if existing_log is not None:
                 # Photo retries may carry re-encoded bytes, so only type/actor are compared.
                 retry_log = {"id": log_id, "type": "Photo", "actor_id": actor_id}
@@ -320,7 +324,7 @@ class DuriStorageWriter:
             exists, that existing Log is returned and nothing is written. If the
             content differs, StorageWriteError is raised and nothing is written.
         """
-        metadata = self._read_metadata(period)
+        metadata = self._read_metadata_for_append(period)
         existing_log = _find_log_by_id(metadata["logs"], log["id"])
         if existing_log is not None:
             _raise_if_different_log(existing_log, log)
@@ -382,6 +386,27 @@ class DuriStorageWriter:
             "participants": self._participants_payload(),
             "logs": [],
         }
+
+    def _read_metadata_for_append(self, period: str) -> JsonObject:
+        """Read metadata.json for a new Log, refusing a partition in another timezone.
+
+        A partition written in one timezone and appended in another would mix
+        offsets in created_at/messages.md and make its "timezone" field untrue.
+
+        Args:
+            period: Month partition such as "2026-07".
+
+        Returns:
+            The partition metadata. Raises StorageWriteError on a timezone mismatch.
+        """
+        metadata = self._read_metadata(period)
+        partition_timezone = metadata.get("timezone")
+        if partition_timezone is not None and partition_timezone != self.app_timezone:
+            raise StorageWriteError(
+                f"partition {period} is in timezone {partition_timezone!r} but the writer "
+                f"uses {self.app_timezone!r}; refusing to mix timezones in one partition"
+            )
+        return metadata
 
     def _write_metadata(self, period: str, metadata: JsonObject) -> None:
         partition = self._partition_path(period)
@@ -628,7 +653,25 @@ def _photo_result(log: JsonObject) -> JsonObject:
 
 
 def _sorted_logs(logs: list[JsonObject]) -> list[JsonObject]:
-    return sorted(logs, key=lambda log: (log["created_at"], log["id"]))
+    return sorted(logs, key=_log_sort_key)
+
+
+def _log_sort_key(log: JsonObject) -> tuple[datetime, str]:
+    """Sort by the real instant of created_at, not by its text.
+
+    Args:
+        log: A Log (possibly hand-edited).
+
+    Returns:
+        (created_at, id). A missing/invalid created_at sorts first; a value
+        without offset is read as UTC (same rule as the Timeline reader).
+    """
+    created_at = _parse_optional_datetime(log.get("created_at"))
+    if created_at is None:
+        created_at = EARLIEST_AWARE_DATETIME
+    elif created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=UTC)
+    return created_at, str(log.get("id", ""))
 
 
 def _as_app_datetime(value: datetime, timezone: ZoneInfo) -> datetime:

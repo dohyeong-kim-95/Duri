@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from duri_api.storage import DuriStorageWriter
+from duri_api.storage import DuriStorageWriter, StorageWriteError
 from duri_api.timeline import read_timeline_logs, read_timeline_summary, search_timeline_logs
 
 PARTICIPANTS = {
@@ -107,3 +107,48 @@ def test_m2_naive_datetime_is_rejected_and_nothing_is_written(tmp_path: Path) ->
 
     assert list(tmp_path.rglob("*.json")) == []
     assert [path for path in tmp_path.rglob("*") if path.is_file()] == []
+
+
+def test_m3_writer_sorts_by_real_time_and_refuses_a_partition_in_another_timezone(
+    tmp_path: Path,
+) -> None:
+    write_raw_metadata(
+        tmp_path,
+        "2026-07",
+        {
+            "schema_version": 1,
+            "period": "2026-07",
+            "timezone": "Asia/Seoul",
+            "participants": {},
+            "logs": [
+                # 03:00 UTC written with +00:00, later than 10:00+09:00 (01:00 UTC).
+                {
+                    "id": "01J_MSG_LATER",
+                    "type": "Message",
+                    "created_at": "2026-07-12T03:00:00+00:00",
+                    "actor_id": "01J_USER_A",
+                    "payload": {"text": "later"},
+                },
+                {
+                    "id": "01J_MSG_BROKEN",
+                    "type": "Message",
+                    "actor_id": "01J_USER_A",
+                    "payload": {"text": "no created_at"},
+                },
+            ],
+        },
+    )
+    append_text(make_writer(tmp_path), "01J_MSG_EARLIER", "2026-07-12T10:00:00+09:00", "earlier")
+
+    log_ids = [log["id"] for log in read_metadata(tmp_path, "2026-07")["logs"]]  # type: ignore[attr-defined]
+    assert log_ids == ["01J_MSG_BROKEN", "01J_MSG_EARLIER", "01J_MSG_LATER"]
+
+    metadata_before = read_metadata(tmp_path, "2026-07")
+    with pytest.raises(StorageWriteError, match="timezone"):
+        append_text(
+            make_writer(tmp_path, app_timezone="UTC"),
+            "01J_MSG_UTC",
+            "2026-07-13T00:00:00+00:00",
+            "utc writer",
+        )
+    assert read_metadata(tmp_path, "2026-07") == metadata_before
