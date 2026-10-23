@@ -199,7 +199,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     Run with: uvicorn --factory duri_api.main:create_app_from_env
 
     Variables:
-        DURI_STORAGE_ROOT: DuriStorage directory (required).
+        DURI_STORAGE_ROOT: existing DuriStorage directory (required).
         DURI_AUTH_DB: auth SQLite path, outside DuriStorage (required).
         DURI_JWT_SECRET: token signing key, at least 32 bytes (required).
         DURI_HASH_SECRET: hash key, at least 32 bytes, different from the signing key
@@ -212,7 +212,8 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         environ: Variables to read (None reads os.environ).
 
     Returns:
-        The configured FastAPI app. Raises ValueError if a variable is missing or weak.
+        The configured FastAPI app. Raises ValueError if a variable is missing,
+        weak or blank, or if DURI_STORAGE_ROOT is not an existing directory.
     """
     if environ is None:
         environ = os.environ
@@ -222,8 +223,16 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
         raise ValueError(f"missing required environment variables: {', '.join(missing)}")
 
     for name in ("DURI_JWT_SECRET", "DURI_HASH_SECRET"):
-        if len(environ[name].encode("utf-8")) < MIN_SECRET_BYTES:
-            raise ValueError(f"{name} must be at least {MIN_SECRET_BYTES} bytes")
+        # Surrounding whitespace does not count, so a blank secret is refused.
+        if len(environ[name].strip().encode("utf-8")) < MIN_SECRET_BYTES:
+            raise ValueError(
+                f"{name} must be at least {MIN_SECRET_BYTES} bytes without surrounding whitespace"
+            )
+
+    storage_root = Path(environ["DURI_STORAGE_ROOT"])
+    if not storage_root.is_dir():
+        # A typo would otherwise serve an empty Timeline without any warning.
+        raise ValueError(f"DURI_STORAGE_ROOT {storage_root} is not an existing directory")
 
     # The writer and the recovery CLI read the same variable; fail fast on a typo.
     app_timezone = app_timezone_from_env(environ)
@@ -246,7 +255,7 @@ def create_app_from_env(environ: Mapping[str, str] | None = None) -> FastAPI:
     )
     return create_app(
         auth_service=auth_service,
-        storage_root=Path(environ["DURI_STORAGE_ROOT"]),
+        storage_root=storage_root,
         cors_origins=cors_origins,
     )
 

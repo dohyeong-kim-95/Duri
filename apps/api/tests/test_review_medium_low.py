@@ -391,6 +391,7 @@ def test_m8_open_timeline_websocket_is_closed_after_device_revocation(tmp_path: 
 
 
 def valid_env(tmp_path: Path) -> dict[str, str]:
+    (tmp_path / "DuriStorage").mkdir(exist_ok=True)
     return {
         "DURI_STORAGE_ROOT": str(tmp_path / "DuriStorage"),
         "DURI_AUTH_DB": str(tmp_path / "auth" / "auth.sqlite3"),
@@ -633,7 +634,6 @@ def test_regenerate_messages_holds_the_partition_lock(tmp_path: Path) -> None:
 
 def test_photo_path_with_nul_byte_is_a_bad_request(tmp_path: Path) -> None:
     environ = valid_env(tmp_path)
-    Path(environ["DURI_STORAGE_ROOT"]).mkdir()
     assert resolve_storage_path(Path(environ["DURI_STORAGE_ROOT"]), "a\x00.jpg") is None
 
     app = create_app_from_env(environ)
@@ -652,3 +652,15 @@ def test_photo_path_with_nul_byte_is_a_bad_request(tmp_path: Path) -> None:
             )
 
     assert asyncio.run(get_photo()).status_code == 400
+
+
+def test_env_app_refuses_blank_secrets_and_a_missing_storage_root(tmp_path: Path) -> None:
+    environ = valid_env(tmp_path)
+    environ["DURI_JWT_SECRET"] = " " * 40
+    with pytest.raises(ValueError, match="DURI_JWT_SECRET"):
+        create_app_from_env(environ)
+
+    environ = valid_env(tmp_path)
+    environ["DURI_STORAGE_ROOT"] = str(tmp_path / "DuriStorgae")
+    with pytest.raises(ValueError, match="DURI_STORAGE_ROOT"):
+        create_app_from_env(environ)

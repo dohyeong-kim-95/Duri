@@ -195,12 +195,13 @@ npm run dev:web
 .venv/bin/uvicorn duri_api.main:create_app_from_env --factory --app-dir apps/api/src --reload
 ```
 
-API 설정은 환경변수로 준다(없거나 시크릿이 32바이트 미만이면 시작을 거부한다).
+API 설정은 환경변수로 준다(없거나, 시크릿이 앞뒤 공백을 뺀 32바이트 미만이거나,
+`DURI_STORAGE_ROOT`가 없는 디렉터리면 시작을 거부한다).
 `duri_api.main:app`은 설정이 없는 기본 앱이라 모든 데이터 엔드포인트가 401이다.
 
 | 변수 | 내용 |
 |------|------|
-| `DURI_STORAGE_ROOT` | `DuriStorage/` 경로 (필수) |
+| `DURI_STORAGE_ROOT` | `DuriStorage/` 경로, 이미 있는 디렉터리 (필수) |
 | `DURI_AUTH_DB` | 인증 SQLite 경로, `DuriStorage/` 밖 (필수) |
 | `DURI_JWT_SECRET` | 토큰 서명 키, 32바이트 이상 (필수) |
 | `DURI_HASH_SECRET` | 해시 키, 32바이트 이상, 서명 키와 달라야 함 (필수) |
