@@ -73,6 +73,48 @@
 - [ ] B4-1. 특정 기기의 세션을 폐기하면 그 기기의 refresh token은 거부된다.
 - [ ] B4-2. 한 기기의 폐기는 같은 사용자의 다른 기기 세션에 영향을 주지 않는다.
 
+## R. 코드 리뷰 회귀 테스트 — **Pending Fable review** *(2026-10-23 제안, 미승인)*
+
+> 코드 리뷰(H1~H5) 수정과 함께 추가된 테스트다. `apps/api/tests/gate_spec/test_review_findings.py`에
+> `gate_spec` marker로 있고 CI에서 통과하지만, **Fable이 승인하기 전까지는 Gate Spec이 아니다.**
+> 요청 내용은 [fable-review-request-review-fixes.md](./fable-review-request-review-fixes.md).
+> 승인되면 체크하고, 반려되면 이 절과 해당 테스트의 marker를 조정한다.
+
+### R-H1. `messages.md` 실패 / 같은 `log_id` 재시도
+
+- [ ] R-H1-1. `metadata.json` 확정 뒤 `messages.md` 재생성이 실패해도 쓰기는 성공으로 반환된다.
+- [ ] R-H1-2. 같은 `log_id`로 같은 내용을 다시 쓰면 중복 Log를 만들지 않고 기존 Log를 반환하고, 다른 내용(type·actor·시각·본문)이면 기존 Log를 돌려주지 않고 오류로 거부한다 (메시지·사진 모두, 사진의 재인코딩 바이트 차이는 같은 내용으로 본다).
+- [ ] R-H1-3. `metadata.json` 확정 뒤에는 `messages.md` 렌더링·쓰기에서 어떤 예외가 나도 쓰기와 orphan 복구는 성공으로 반환된다.
+
+### R-H2. 인덱스 재구축
+
+- [ ] R-H2-1. 정본에 같은 `id`가 중복돼도 인덱스 재구축은 실패하지 않고, 실패하더라도 기존 인덱스는 남는다.
+- [ ] R-H2-2. 인덱스 재구축은 옛 인덱스에 남은 `-wal`/`-shm` 파일을 새 인덱스에 적용하지 않고, 임시 파일을 남기지 않는다.
+
+### R-H3. 사진 원본 덮어쓰기 방지
+
+- [ ] R-H3-1. 사진 파일명이 겹쳐도 기존 원본 사진은 덮어써지지 않는다 — 같은 바이트면 기존 파일을 재사용하고, 다른 바이트면 새 이름으로 저장한다.
+- [ ] R-H3-2. 이미 같은 바이트의 사진 파일이 있는 경로로 다시 쓰면 파일을 새로 만들지 않고 그 파일을 참조한다 (크래시 후 재시도).
+- [ ] R-H3-3. 이름 확인과 저장 사이에 다른 프로세스가 같은 사진 파일명을 먼저 만들어도 그 원본은 덮어써지지 않고, 새 사진은 다른 이름으로 저장된다.
+
+### R-H4. Orphan 복구
+
+- [ ] R-H4-1. 같은 바이트의 orphan 파일 두 개는 서로 다른 id로 복구되고, 복구 뒤에도 인덱스 재구축이 가능하다.
+- [ ] R-H4-2. writer가 만든 파일명(`<created_at>_<log_id>.ext`)의 orphan은 원래 시각과 log_id로 복구되고, 그 외 파일만 월 시작 시각으로 복구된다.
+- [ ] R-H4-3. orphan 파일명의 시각은 그 파티션 `metadata.json`의 timezone으로 해석하고, log_id가 이미 쓰이고 있어도 파일명의 시각은 유지한다.
+
+### R-H5. 지원하지 않는 `metadata.json` 포맷 (임시 가드, [RFC 0002](../docs/rfc/0002-duristorage-canonical-format.md) 결정 전)
+
+- [ ] R-H5-1. `schema_version`이 없는 `metadata.json`은 Timeline/Summary에서 건너뛰며, `period: "None"` 같은 잘못된 결과를 내지 않는다.
+- [ ] R-H5-2. writer는 `schema_version`이 없는 기존 `metadata.json`을 덮어쓰지 않고 명확한 오류로 거부한다.
+- [ ] R-H5-3. `schema_version`이 지원 버전(1)이 아니면(미래 버전 `2`, 문자열 `"1"` 등) reader는 건너뛰고 writer는 쓰기를 거부한다.
+
+### 기존 Spec 테스트 변경 (Pending)
+
+- A2-3 테스트: `messages.md` 실패 시 `StorageWriteError`를 기대하던 단언을 없애고 성공 반환을
+  기대한다. `metadata.json`·사진 바이트·sha256 단언은 그대로다. Spec 문장은 바꾸지 않았다.
+  규칙 C3에 따라 Fable review를 요청한다.
+
 ## C. 운영 규칙
 
 1. 위 테스트는 `scripts/ci.sh`가 실행하는 스위트에 포함되어야 하며, Gate

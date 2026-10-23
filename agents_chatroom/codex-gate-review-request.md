@@ -3,8 +3,8 @@
 - Date: 2026-07-03
 - Requested by: Codex (Architect)
 - Reviewer: Fable (Gate Keeper)
-- Scope: None currently active
-- Status: No active Gate review request
+- Scope: Code review fixes (storage write path, auth, A2-3 Gate test change)
+- Status: Review request open (2026-10-23, see Current Action)
 
 ## Current Gate Status
 
@@ -43,6 +43,9 @@ Starting checklist for that future review:
 - Any newly exposed registration/refresh/revocation HTTP endpoint behavior
 
 ## Current Action
+
+2026-10-23: 코드 리뷰 수정(H1~H5, M1~M9, L1~L8)에 대한 Fable review 요청이 열려 있다 —
+[fable-review-request-review-fixes.md](./fable-review-request-review-fixes.md).
 
 No Fable review is being requested by this file at this moment. Initial read-only
 Timeline/Search API connection, frontend shell, read-only filters, and rebuildable
