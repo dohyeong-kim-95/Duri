@@ -11,7 +11,12 @@ from pathlib import Path
 import pytest
 
 from duri_api.storage import DuriStorageWriter, StorageWriteError
-from duri_api.timeline import read_timeline_logs, read_timeline_summary, search_timeline_logs
+from duri_api.timeline import (
+    read_timeline_logs,
+    read_timeline_summary,
+    resolve_storage_path,
+    search_timeline_logs,
+)
 
 PARTICIPANTS = {
     "01J_USER_A": "UserA",
@@ -202,3 +207,29 @@ def test_m4_concurrent_writer_processes_do_not_lose_logs(tmp_path: Path) -> None
     assert len(logs) == messages_per_process * len(process_names)  # type: ignore[arg-type]
     leftover_temp_files = list(partition_path(tmp_path, "2026-07").glob("*.tmp"))
     assert leftover_temp_files == []
+
+
+@pytest.mark.parametrize("period", ["../../etc", "2026-13", "2026-7", "2026-07/..", ""])
+def test_l4_invalid_period_is_rejected_before_touching_the_filesystem(
+    tmp_path: Path,
+    period: str,
+) -> None:
+    writer = make_writer(tmp_path)
+
+    with pytest.raises(ValueError, match="invalid period"):
+        writer.regenerate_messages(period)
+    with pytest.raises(ValueError, match="invalid period"):
+        writer.recover_orphan_media(period)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_l4_photo_path_cannot_escape_storage_root(tmp_path: Path) -> None:
+    storage_root = tmp_path / "DuriStorage"
+    storage_root.mkdir()
+
+    inside = resolve_storage_path(storage_root, "timeline/2026/2026-07/photos/a.jpg")
+    assert inside == storage_root.resolve() / "timeline/2026/2026-07/photos/a.jpg"
+    assert resolve_storage_path(storage_root, "../auth.sqlite3") is None
+    assert resolve_storage_path(storage_root, "timeline/../../auth.sqlite3") is None
+    assert resolve_storage_path(storage_root, "/etc/passwd") is None
+    assert resolve_storage_path(storage_root, "") is None

@@ -8,7 +8,12 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 
 from duri_api.auth import AuthError, AuthIdentity, AuthService
-from duri_api.timeline import read_timeline_logs, read_timeline_summary, search_timeline_logs
+from duri_api.timeline import (
+    read_timeline_logs,
+    read_timeline_summary,
+    resolve_storage_path,
+    search_timeline_logs,
+)
 
 APP_VERSION = "0.1.0"
 
@@ -143,6 +148,8 @@ def create_app(
     @app.get("/photos/{photo_path:path}", tags=["data"])
     async def photo(photo_path: str, request: Request) -> dict[str, Any]:
         identity = require_identity(request)
+        if storage_root is not None and resolve_storage_path(storage_root, photo_path) is None:
+            raise HTTPException(status_code=400, detail="invalid photo path")
         return {"photo_path": photo_path, "identity": identity.as_dict()}
 
     @app.get("/search", tags=["data"])

@@ -137,6 +137,26 @@ def _read_metadata_files(storage_root: Path) -> list[JsonObject]:
     return metadata
 
 
+def resolve_storage_path(storage_root: Path, relative_path: str) -> Path | None:
+    """Resolve a client-supplied path inside DuriStorage.
+
+    Args:
+        storage_root: DuriStorage root directory.
+        relative_path: Path relative to the root, e.g. a MediaRef storage_path.
+
+    Returns:
+        The resolved path, or None if it is absolute or escapes the root
+        (e.g. "../auth.sqlite3").
+    """
+    if not relative_path or Path(relative_path).is_absolute():
+        return None
+    root = storage_root.resolve()
+    resolved = (root / relative_path).resolve()
+    if not resolved.is_relative_to(root):
+        return None
+    return resolved
+
+
 def _display_name(*, participants: Any, actor_id: str) -> str:
     if isinstance(participants, dict):
         participant = participants.get(actor_id)

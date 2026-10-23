@@ -502,6 +502,7 @@ class DuriStorageWriter:
         }
 
     def _partition_path(self, period: str) -> Path:
+        validate_period(period)
         return self.storage_root / "timeline" / period[:4] / period
 
     def _metadata_path(self, period: str) -> Path:
@@ -539,6 +540,22 @@ class DuriStorageWriter:
             if partition_key not in cls._partition_locks:
                 cls._partition_locks[partition_key] = threading.Lock()
             return cls._partition_locks[partition_key]
+
+
+PERIOD_PATTERN = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+
+
+def validate_period(period: str) -> None:
+    """Make sure a period is a plain "YYYY-MM" before it becomes part of a path.
+
+    Args:
+        period: Month partition such as "2026-07".
+
+    Returns:
+        None. Raises ValueError for anything else (e.g. "../x", "2026-13").
+    """
+    if not isinstance(period, str) or PERIOD_PATTERN.fullmatch(period) is None:
+        raise ValueError(f"invalid period {period!r}; expected YYYY-MM")
 
 
 def rebuild_timeline_index(storage_root: Path, db_path: Path) -> None:
