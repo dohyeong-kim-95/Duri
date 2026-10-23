@@ -145,10 +145,12 @@ def resolve_storage_path(storage_root: Path, relative_path: str) -> Path | None:
         relative_path: Path relative to the root, e.g. a MediaRef storage_path.
 
     Returns:
-        The resolved path, or None if it is absolute or escapes the root
-        (e.g. "../auth.sqlite3").
+        The resolved path, or None if it is absolute, escapes the root
+        (e.g. "../auth.sqlite3") or contains a NUL byte.
     """
-    if not relative_path or Path(relative_path).is_absolute():
+    if not relative_path or "\x00" in relative_path:
+        return None
+    if Path(relative_path).is_absolute():
         return None
     root = storage_root.resolve()
     resolved = (root / relative_path).resolve()

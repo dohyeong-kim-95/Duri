@@ -629,3 +629,26 @@ def test_regenerate_messages_holds_the_partition_lock(tmp_path: Path) -> None:
     writer.regenerate_messages("2026-07")
 
     assert lock_states == [True]
+
+
+def test_photo_path_with_nul_byte_is_a_bad_request(tmp_path: Path) -> None:
+    environ = valid_env(tmp_path)
+    Path(environ["DURI_STORAGE_ROOT"]).mkdir()
+    assert resolve_storage_path(Path(environ["DURI_STORAGE_ROOT"]), "a\x00.jpg") is None
+
+    app = create_app_from_env(environ)
+    auth = AuthService(
+        db_path=Path(environ["DURI_AUTH_DB"]),
+        jwt_secret=environ["DURI_JWT_SECRET"],
+        hash_secret=environ["DURI_HASH_SECRET"],
+    )
+    access_token = register_user_a(auth)["access_token"]
+
+    async def get_photo() -> httpx.Response:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.get(
+                "/photos/%00", headers={"Authorization": f"Bearer {access_token}"}
+            )
+
+    assert asyncio.run(get_photo()).status_code == 400
