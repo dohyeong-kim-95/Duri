@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import logging
@@ -8,7 +9,8 @@ import os
 import re
 import secrets
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +30,7 @@ MessagesHook = Callable[[Path], None]
 
 SCHEMA_VERSION = 1
 MAX_PHOTO_NAME_ATTEMPTS = 100
+PARTITION_LOCK_FILENAME = ".write.lock"
 
 logger = logging.getLogger(__name__)
 
@@ -105,9 +108,8 @@ class DuriStorageWriter:
         ingested_at: datetime | None = None,
     ) -> JsonObject:
         period = self._period_for(created_at)
-        lock = self._lock_for(period)
 
-        with lock:
+        with self._partition_lock(period):
             existing_log = _find_log_by_id(self._read_metadata_for_append(period)["logs"], log_id)
             if existing_log is not None:
                 # Photo retries may carry re-encoded bytes, so only type/actor are compared.
@@ -223,8 +225,7 @@ class DuriStorageWriter:
         return content
 
     def recover_orphan_media(self, period: str) -> list[JsonObject]:
-        lock = self._lock_for(period)
-        with lock:
+        with self._partition_lock(period):
             metadata = self._read_metadata(period)
             partition = self._partition_path(period)
             photos_dir = partition / "photos"
@@ -308,9 +309,32 @@ class DuriStorageWriter:
             return recovered
 
     def _append_log(self, period: str, log: JsonObject) -> JsonObject:
-        lock = self._lock_for(period)
-        with lock:
+        with self._partition_lock(period):
             return self._append_log_locked(period, log)
+
+    @contextmanager
+    def _partition_lock(self, period: str) -> Iterator[None]:
+        """Serialize writes to one month partition across threads and processes.
+
+        The threading.Lock covers threads of this process; an exclusive fcntl.flock
+        on "<partition>/.write.lock" covers other processes (e.g. several uvicorn
+        workers) on the same Linux host.
+
+        Args:
+            period: Month partition such as "2026-07".
+
+        Returns:
+            A context manager that holds both locks while the block runs.
+        """
+        partition = self._partition_path(period)
+        partition.mkdir(parents=True, exist_ok=True)
+        with self._lock_for(period):
+            with (partition / PARTITION_LOCK_FILENAME).open("a") as lock_file:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                try:
+                    yield
+                finally:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
     def _append_log_locked(self, period: str, log: JsonObject) -> JsonObject:
         """Append a Log to the period's metadata.json, idempotently.
@@ -413,7 +437,7 @@ class DuriStorageWriter:
         partition.mkdir(parents=True, exist_ok=True)
         (partition / "photos").mkdir(exist_ok=True)
         metadata_path = self._metadata_path(period)
-        temp_path = partition / "metadata.json.tmp"
+        temp_path = partition / f"metadata.json.{os.getpid()}.{secrets.token_hex(4)}.tmp"
         payload = json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True)
 
         try:

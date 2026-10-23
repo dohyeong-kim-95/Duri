@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -152,3 +154,51 @@ def test_m3_writer_sorts_by_real_time_and_refuses_a_partition_in_another_timezon
             "utc writer",
         )
     assert read_metadata(tmp_path, "2026-07") == metadata_before
+
+
+WRITER_PROCESS_SCRIPT = """
+import sys
+from datetime import datetime
+from pathlib import Path
+
+from duri_api.storage import DuriStorageWriter
+
+storage_root = Path(sys.argv[1])
+worker = sys.argv[2]
+writer = DuriStorageWriter(
+    storage_root=storage_root,
+    participants={"01J_USER_A": "UserA"},
+    app_timezone="Asia/Seoul",
+)
+for number in range(int(sys.argv[3])):
+    writer.append_message(
+        log_id=f"01J_MSG_{worker}_{number:03d}",
+        actor_id="01J_USER_A",
+        created_at=datetime.fromisoformat("2026-07-12T10:00:00+09:00"),
+        message_id=f"01J_MESSAGE_{worker}_{number:03d}",
+        text=f"{worker} {number}",
+    )
+"""
+
+
+def test_m4_concurrent_writer_processes_do_not_lose_logs(tmp_path: Path) -> None:
+    messages_per_process = 40
+    process_names = ["P1", "P2", "P3"]
+    processes = []
+    for process_name in process_names:
+        command = [
+            sys.executable,
+            "-c",
+            WRITER_PROCESS_SCRIPT,
+            str(tmp_path),
+            process_name,
+            str(messages_per_process),
+        ]
+        processes.append(subprocess.Popen(command))
+    for process in processes:
+        assert process.wait(timeout=120) == 0
+
+    logs = read_metadata(tmp_path, "2026-07")["logs"]
+    assert len(logs) == messages_per_process * len(process_names)  # type: ignore[arg-type]
+    leftover_temp_files = list(partition_path(tmp_path, "2026-07").glob("*.tmp"))
+    assert leftover_temp_files == []
