@@ -55,4 +55,5 @@ ADR은 Duri의 아키텍처/설계와 관련해 **이미 내려진 결정**과 �
 | [ADR-006](./ADR-006-raw-gps-location-metadata.md) | Raw GPS Location Metadata (CEO Decision #006) | Accepted | 2026-07-02 |
 | [ADR-007](./ADR-007-storage-is-export.md) | Storage is Export (CEO Decision #007) | Accepted | 2026-07-02 |
 | [ADR-008](./ADR-008-preservation-first-mvp-vaultfolder-future-work.md) | Preservation-first MVP — VaultFolder Curation is Future Work | Accepted | 2026-07-03 |
-| [ADR-009](./ADR-009-duristorage-canonical-format.md) | DuriStorage canonical metadata format (sink format vs RFC 0001) | Proposed | 2026-10-22 |
+
+ADR-009 번호는 [RFC 0002](../rfc/0002-duristorage-canonical-format.md)로 옮긴 미결정 제안이 썼던 번호라 재사용하지 않는다.

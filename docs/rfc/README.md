@@ -53,3 +53,4 @@ RFC 자체는 논의 과정의 기록으로 보존한다(합의 후에도 삭제
 | No. | Title | Status | Date |
 |-----|-------|--------|------|
 | [0001](./0001-storage-layout.md) | Storage Layout | Accepted | 2026-07-02 |
+| [0002](./0002-duristorage-canonical-format.md) | DuriStorage canonical metadata format (sink format vs RFC 0001) | Draft | 2026-10-22 |
