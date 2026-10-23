@@ -7,10 +7,12 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from duri_api import recover
+from duri_api.auth import AuthError, AuthService
 from duri_api.storage import DuriStorageWriter, StorageWriteError
 from duri_api.timeline import (
     read_timeline_logs,
@@ -166,6 +168,7 @@ WRITER_PROCESS_SCRIPT = """
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from duri_api.storage import DuriStorageWriter
 
@@ -279,3 +282,50 @@ def test_m6_search_matches_values_only_and_finds_quoted_text(tmp_path: Path) -> 
     assert search_ids('"안녕"') == ["01J_MSG_QUOTE"]
     assert search_ids("park-walk") == ["01J_PHOTO_PARK"]
     assert search_ids("UserB") == ["01J_MSG_QUOTE", "01J_PHOTO_PARK"]
+
+
+def make_auth(tmp_path: Path) -> AuthService:
+    return AuthService(
+        db_path=tmp_path / "auth.sqlite3",
+        jwt_secret="test-secret",
+        hash_secret="test-hash-secret",
+    )
+
+
+def register_user_a(auth: AuthService) -> dict[str, Any]:
+    auth.create_invite_code(code="invite-slot-1", intended_slot=1)
+    return auth.register_with_invite(
+        code="invite-slot-1",
+        display_name="UserA",
+        device_label="phone",
+        device_fingerprint="fingerprint-phone",
+    )
+
+
+def test_m7_revoked_device_can_register_again_without_reviving_old_sessions(
+    tmp_path: Path,
+) -> None:
+    auth = make_auth(tmp_path)
+    registered = register_user_a(auth)
+    user_id = registered["user"]["id"]
+    old_device_id = registered["device"]["id"]
+    auth.revoke_device(old_device_id)
+
+    again = auth.create_device_session(
+        user_id=user_id,
+        device_label="phone (found)",
+        device_fingerprint="fingerprint-phone",
+    )
+
+    assert again["device"]["id"] == old_device_id
+    assert again["device"]["revoked_at"] is None
+    assert "access_token" in auth.refresh_access_token(again["refresh_token"])
+    with pytest.raises(AuthError):
+        auth.refresh_access_token(registered["refresh_token"])
+    # An active device with the same fingerprint is a clear error, not a 500.
+    with pytest.raises(AuthError, match="already registered"):
+        auth.create_device_session(
+            user_id=user_id,
+            device_label="phone copy",
+            device_fingerprint="fingerprint-phone",
+        )

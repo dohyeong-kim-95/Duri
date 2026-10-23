@@ -442,6 +442,26 @@ class AuthService:
         device_fingerprint: str,
         now: float,
     ) -> JsonObject:
+        fingerprint_hash = self._hash_secret("device-fingerprint", device_fingerprint)
+        existing = _one(
+            connection.execute(
+                """
+                SELECT id, created_at, revoked_at
+                FROM devices
+                WHERE user_id = ? AND fingerprint_hash = ?
+                """,
+                (user_id, fingerprint_hash),
+            )
+        )
+        if existing is not None:
+            return self._reactivate_device(
+                connection,
+                existing=existing,
+                user_id=user_id,
+                device_label=device_label,
+                now=now,
+            )
+
         cursor = connection.execute(
             """
             INSERT INTO devices (
@@ -452,7 +472,7 @@ class AuthService:
             (
                 user_id,
                 device_label,
-                self._hash_secret("device-fingerprint", device_fingerprint),
+                fingerprint_hash,
                 now,
                 now,
             ),
@@ -462,6 +482,50 @@ class AuthService:
             "user_id": user_id,
             "label": device_label,
             "created_at": _unix_to_iso(now),
+            "last_seen_at": _unix_to_iso(now),
+            "revoked_at": None,
+        }
+
+    def _reactivate_device(
+        self,
+        connection: sqlite3.Connection,
+        existing: sqlite3.Row,
+        user_id: int,
+        device_label: str,
+        now: float,
+    ) -> JsonObject:
+        """Re-register a previously revoked device (e.g. a lost phone that was found).
+
+        The device row is reused because UNIQUE (user_id, fingerprint_hash) keeps it.
+        Sessions issued before the revocation stay revoked; the caller creates a new one.
+
+        Args:
+            connection: Open connection inside the caller's transaction.
+            existing: The devices row with the same user and fingerprint.
+            user_id: Owner of the device.
+            device_label: New label for the device.
+            now: Current unix time.
+
+        Returns:
+            The device payload. Raises AuthError if the device is still active.
+        """
+        if existing["revoked_at"] is None:
+            raise AuthError("device already registered")
+
+        device_id = cast(int, existing["id"])
+        connection.execute(
+            """
+            UPDATE devices
+            SET label = ?, last_seen_at = ?, revoked_at = NULL
+            WHERE id = ?
+            """,
+            (device_label, now, device_id),
+        )
+        return {
+            "id": device_id,
+            "user_id": user_id,
+            "label": device_label,
+            "created_at": _unix_to_iso(cast(float, existing["created_at"])),
             "last_seen_at": _unix_to_iso(now),
             "revoked_at": None,
         }
