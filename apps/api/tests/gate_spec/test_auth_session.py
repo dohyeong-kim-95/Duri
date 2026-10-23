@@ -170,7 +170,9 @@ def test_b2_1_invite_code_plaintext_is_never_stored(tmp_path: Path) -> None:
     register_user(auth, code=raw_code, slot=1)
 
     assert raw_code.encode() not in sqlite_bytes(auth.db_path)
-    assert sqlite_scalar(auth.db_path, "SELECT COUNT(*) FROM invite_codes WHERE code_hash != ''") == 1
+    assert (
+        sqlite_scalar(auth.db_path, "SELECT COUNT(*) FROM invite_codes WHERE code_hash != ''") == 1
+    )
     assert list(storage_root.rglob("*")) == []
 
 
@@ -182,7 +184,10 @@ def test_b2_2_refresh_token_plaintext_is_never_stored(tmp_path: Path) -> None:
     result = register_user(auth, code="refresh-secret", slot=1)
 
     assert result["refresh_token"].encode() not in sqlite_bytes(auth.db_path)
-    assert sqlite_scalar(auth.db_path, "SELECT COUNT(*) FROM sessions WHERE refresh_token_hash != ''") == 1
+    assert (
+        sqlite_scalar(auth.db_path, "SELECT COUNT(*) FROM sessions WHERE refresh_token_hash != ''")
+        == 1
+    )
 
 
 @pytest.mark.gate_spec(
@@ -224,9 +229,7 @@ def test_b2_4_signing_key_rotation_does_not_invalidate_stored_hashes(
         rotated.validate_access_token(result["access_token"])
 
     refreshed = rotated.refresh_access_token(result["refresh_token"])
-    response = asyncio.run(
-        get_json(rotated, "/timeline", access_token=refreshed["access_token"])
-    )
+    response = asyncio.run(get_json(rotated, "/timeline", access_token=refreshed["access_token"]))
 
     assert refreshed["access_token"] != result["access_token"]
     assert response.status_code == 200
@@ -281,9 +284,7 @@ def test_b3_3_valid_refresh_session_can_issue_new_access_token(tmp_path: Path) -
     assert response.status_code == 200
 
 
-@pytest.mark.gate_spec(
-    "B4-1. 특정 기기의 세션을 폐기하면 그 기기의 refresh token은 거부된다."
-)
+@pytest.mark.gate_spec("B4-1. 특정 기기의 세션을 폐기하면 그 기기의 refresh token은 거부된다.")
 def test_b4_1_revoked_device_refresh_token_is_rejected(tmp_path: Path) -> None:
     """B4-1. 특정 기기의 세션을 폐기하면 그 기기의 refresh token은 거부된다."""
     auth = make_auth(tmp_path)
@@ -295,9 +296,7 @@ def test_b4_1_revoked_device_refresh_token_is_rejected(tmp_path: Path) -> None:
         auth.refresh_access_token(result["refresh_token"])
 
 
-@pytest.mark.gate_spec(
-    "B4-2. 한 기기의 폐기는 같은 사용자의 다른 기기 세션에 영향을 주지 않는다."
-)
+@pytest.mark.gate_spec("B4-2. 한 기기의 폐기는 같은 사용자의 다른 기기 세션에 영향을 주지 않는다.")
 def test_b4_2_revoking_one_device_does_not_affect_another_device_session(
     tmp_path: Path,
 ) -> None:

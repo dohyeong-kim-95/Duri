@@ -286,7 +286,7 @@ SINK_FORMAT_METADATA: dict[str, object] = {
 
 
 @pytest.mark.gate_spec(
-    "R-H5-1. `schema_version`이 없는 `metadata.json`은 Timeline/Summary에서 건너뛰며, `period: \"None\"` 같은 잘못된 결과를 내지 않는다."
+    'R-H5-1. `schema_version`이 없는 `metadata.json`은 Timeline/Summary에서 건너뛰며, `period: "None"` 같은 잘못된 결과를 내지 않는다.'
 )
 def test_r_h5_1_readers_skip_metadata_without_schema_version(tmp_path: Path) -> None:
     """R-H5-1. `schema_version`이 없는 `metadata.json`은 Timeline/Summary에서 건너뛰며, `period: "None"` 같은 잘못된 결과를 내지 않는다."""
@@ -303,9 +303,7 @@ def test_r_h5_1_readers_skip_metadata_without_schema_version(tmp_path: Path) -> 
     summary = read_timeline_summary(tmp_path)
 
     assert [log["id"] for log in logs] == ["01J_MSG_R_H5_1"]
-    assert summary["periods"] == [
-        {"period": "2026-08", "total": 1, "types": {"Message": 1}}
-    ]
+    assert summary["periods"] == [{"period": "2026-08", "total": 1, "types": {"Message": 1}}]
 
 
 @pytest.mark.gate_spec(

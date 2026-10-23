@@ -225,7 +225,7 @@ def test_a2_3_messages_regeneration_failure_does_not_affect_metadata_or_photos(
 
 
 @pytest.mark.gate_spec(
-    "A2-4. 원자적 rename 직전의 temp 파일 내용이 업로드된 원본 바이트와 다르면(손상 시뮬레이션) 쓰기가 실패하고 `photos/`에 파일이 남지 않는다 — RFC 0001 §10 2단계(\"hash/size 검증 후 rename\") 준수. *(v1.1 추가)*"
+    'A2-4. 원자적 rename 직전의 temp 파일 내용이 업로드된 원본 바이트와 다르면(손상 시뮬레이션) 쓰기가 실패하고 `photos/`에 파일이 남지 않는다 — RFC 0001 §10 2단계("hash/size 검증 후 rename") 준수. *(v1.1 추가)*'
 )
 def test_a2_4_corrupted_temp_file_fails_before_rename_and_leaves_no_photo(
     tmp_path: Path,
@@ -491,9 +491,9 @@ def test_a5_4_mixed_timezone_logs_are_normalized_and_sorted_in_app_timezone(
         "2026-07-12T19:28:01+09:00",
     ]
 
-    messages = (
-        tmp_path / "timeline" / "2026" / "2026-07" / "messages.md"
-    ).read_text(encoding="utf-8")
+    messages = (tmp_path / "timeline" / "2026" / "2026-07" / "messages.md").read_text(
+        encoding="utf-8"
+    )
     assert "19:28 — Dohyeong\n: 먼저 온 KST 메시지" in messages
     assert "19:28 — Partner\n: 1초 뒤 UTC 메시지" in messages
     assert "10:28" not in messages

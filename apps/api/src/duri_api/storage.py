@@ -282,9 +282,7 @@ class DuriStorageWriter:
         metadata = self._read_metadata(period)
         existing_log = _find_log_by_id(metadata["logs"], log["id"])
         if existing_log is not None:
-            logger.warning(
-                "log %s already exists in %s; returning existing log", log["id"], period
-            )
+            logger.warning("log %s already exists in %s; returning existing log", log["id"], period)
             return existing_log
 
         metadata["logs"].append(log)
