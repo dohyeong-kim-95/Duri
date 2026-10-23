@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   ApiRequestError,
+  TimelineFilters,
   TimelineLog,
   TimelineSummaryResponse,
   fetchTimeline,
@@ -92,7 +93,7 @@ export function TimelineWorkspace({
     }
   }
 
-  async function loadTimeline(token = accessToken) {
+  async function loadTimeline(token = accessToken, filters: TimelineFilters = currentFilters()) {
     setState("loading");
     setError("");
 
@@ -100,7 +101,7 @@ export function TimelineWorkspace({
       const response = await fetchTimeline({
         apiBaseUrl,
         accessToken: token,
-        filters: currentFilters(),
+        filters,
       });
       setItems(response.items);
       setState("ready");
@@ -111,7 +112,11 @@ export function TimelineWorkspace({
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await runQuery(currentFilters());
+  }
 
+  // Filters are passed in because a just-changed select value is not in state yet.
+  async function runQuery(filters: TimelineFilters) {
     if (!accessToken) {
       setState("locked");
       return;
@@ -122,7 +127,7 @@ export function TimelineWorkspace({
 
     try {
       if (!query.trim()) {
-        await loadTimeline();
+        await loadTimeline(accessToken, filters);
         return;
       }
 
@@ -130,7 +135,7 @@ export function TimelineWorkspace({
         apiBaseUrl,
         accessToken,
         query,
-        filters: currentFilters(),
+        filters,
       });
       setItems(response.results);
       setState("ready");
@@ -202,7 +207,11 @@ export function TimelineWorkspace({
                   aria-label="Timeline period"
                   className="filter-input"
                   value={period}
-                  onChange={(event) => setPeriod(event.target.value)}
+                  onChange={(event) => {
+                    const nextPeriod = event.target.value;
+                    setPeriod(nextPeriod);
+                    void runQuery({ period: nextPeriod, type });
+                  }}
                   disabled={!accessToken || state === "loading"}
                 >
                   <option value="">All periods</option>
@@ -221,7 +230,11 @@ export function TimelineWorkspace({
                   aria-label="Timeline type"
                   className="filter-input"
                   value={type}
-                  onChange={(event) => setType(event.target.value)}
+                  onChange={(event) => {
+                    const nextType = event.target.value;
+                    setType(nextType);
+                    void runQuery({ period, type: nextType });
+                  }}
                   disabled={!accessToken || state === "loading"}
                 >
                   <option value="">All types</option>
