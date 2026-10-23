@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from duri_api import recover
 from duri_api.storage import DuriStorageWriter, StorageWriteError
 from duri_api.timeline import (
     read_timeline_logs,
@@ -233,3 +234,23 @@ def test_l4_photo_path_cannot_escape_storage_root(tmp_path: Path) -> None:
     assert resolve_storage_path(storage_root, "timeline/../../auth.sqlite3") is None
     assert resolve_storage_path(storage_root, "/etc/passwd") is None
     assert resolve_storage_path(storage_root, "") is None
+
+
+def test_m5_recovery_cli_recovers_orphans_in_every_partition(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    append_text(make_writer(tmp_path), "01J_MSG_JULY", "2026-07-12T10:00:00+09:00", "july")
+    for period in ("2026-07", "2026-08"):
+        photos_dir = partition_path(tmp_path, period) / "photos"
+        photos_dir.mkdir(parents=True, exist_ok=True)
+        (photos_dir / "IMG_0001.jpg").write_bytes(period.encode())
+    (tmp_path / "timeline" / "2026" / "not-a-period").mkdir()
+
+    exit_code = recover.main(["--storage-root", str(tmp_path), "--timezone", "Asia/Seoul"])
+
+    assert exit_code == 0
+    assert "2026-07: recovered 1" in capsys.readouterr().out
+    assert len(read_metadata(tmp_path, "2026-07")["logs"]) == 2  # type: ignore[arg-type]
+    assert len(read_metadata(tmp_path, "2026-08")["logs"]) == 1  # type: ignore[arg-type]
+    assert recover.recover_all_periods(tmp_path, "Asia/Seoul") == {}

@@ -199,6 +199,13 @@ npm run dev:web
 bash scripts/ci.sh
 ```
 
+Orphan media 복구(사진 rename 뒤 `metadata.json` 쓰기 전에 끊긴 경우)는 자동으로
+돌지 않는다. 서버를 재시작한 뒤, 또는 크래시가 의심될 때 한 번 실행한다.
+
+```bash
+.venv/bin/python -m duri_api.recover --storage-root /path/to/DuriStorage --timezone Asia/Seoul
+```
+
 ## Ownership
 
 모든 데이터와 코드는 우리 둘만을 위한 것이다. 공개 서비스나 수익화를
