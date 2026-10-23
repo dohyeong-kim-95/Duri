@@ -254,3 +254,28 @@ def test_m5_recovery_cli_recovers_orphans_in_every_partition(
     assert len(read_metadata(tmp_path, "2026-07")["logs"]) == 2  # type: ignore[arg-type]
     assert len(read_metadata(tmp_path, "2026-08")["logs"]) == 1  # type: ignore[arg-type]
     assert recover.recover_all_periods(tmp_path, "Asia/Seoul") == {}
+
+
+def test_m6_search_matches_values_only_and_finds_quoted_text(tmp_path: Path) -> None:
+    writer = make_writer(tmp_path)
+    append_text(writer, "01J_MSG_QUOTE", "2026-07-12T10:00:00+09:00", 'UserB said "안녕"')
+    append_text(writer, "01J_MSG_PLAIN", "2026-07-12T11:00:00+09:00", "오늘 저녁")
+    writer.append_photo(
+        log_id="01J_PHOTO_PARK",
+        actor_id="01J_USER_B",
+        created_at=dt("2026-07-12T12:00:00+09:00"),
+        photo_bytes=b"park",
+        original_filename="park-walk.jpg",
+        mime_type="image/jpeg",
+    )
+
+    def search_ids(query: str) -> list[str]:
+        return [log["id"] for log in search_timeline_logs(tmp_path, query)]
+
+    for key_like_query in ["text", "payload", "default", "sha256", "01J_MSG", "timeline/"]:
+        assert search_ids(key_like_query) == [], key_like_query
+    # A quote matches only the message that really contains one.
+    assert search_ids('"') == ["01J_MSG_QUOTE"]
+    assert search_ids('"안녕"') == ["01J_MSG_QUOTE"]
+    assert search_ids("park-walk") == ["01J_PHOTO_PARK"]
+    assert search_ids("UserB") == ["01J_MSG_QUOTE", "01J_PHOTO_PARK"]

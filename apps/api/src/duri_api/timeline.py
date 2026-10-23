@@ -212,14 +212,28 @@ def _sort_datetime(log: JsonObject) -> datetime:
 
 
 def timeline_search_text(log: JsonObject) -> str:
-    searchable = {
-        "id": log.get("id"),
-        "type": log.get("type"),
-        "created_at": log.get("created_at"),
-        "actor_id": log.get("actor_id"),
-        "actor_display_name": log.get("actor_display_name"),
-        "payload": log.get("payload"),
-        "metadata": log.get("metadata"),
-        "media_refs": log.get("media_refs"),
-    }
-    return json.dumps(searchable, ensure_ascii=False, sort_keys=True)
+    """Build the text a search query is matched against.
+
+    Only human content is searched: message text, photo caption, original photo
+    filenames and the actor's display name. JSON keys, ids, hashes and storage
+    paths are left out, so "payload" or "\"" do not match every Log and quotes in
+    a message are matched as typed.
+
+    Args:
+        log: A Timeline Log (with actor_display_name added by the reader).
+
+    Returns:
+        The searchable values joined by newlines.
+    """
+    values: list[object] = []
+    payload = log.get("payload")
+    if isinstance(payload, dict):
+        values.append(payload.get("text"))
+        values.append(payload.get("caption"))
+    media_refs = log.get("media_refs")
+    if isinstance(media_refs, list):
+        for media_ref in media_refs:
+            if isinstance(media_ref, dict):
+                values.append(media_ref.get("original_filename"))
+    values.append(log.get("actor_display_name"))
+    return "\n".join(value for value in values if isinstance(value, str) and value)
