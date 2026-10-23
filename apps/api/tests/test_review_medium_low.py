@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import json
 import os
 import sqlite3
@@ -23,7 +24,12 @@ from duri_api import recover
 from duri_api.auth import AuthError, AuthService
 from duri_api.main import app as default_app
 from duri_api.main import create_app_from_env, handle_timeline_websocket
-from duri_api.storage import DuriStorageWriter, StorageWriteError, app_timezone_from_env
+from duri_api.storage import (
+    DuriStorageWriter,
+    StorageWriteError,
+    StorageWriteHooks,
+    app_timezone_from_env,
+)
 from duri_api.timeline import (
     read_timeline_logs,
     read_timeline_summary,
@@ -600,3 +606,26 @@ def current_umask() -> int:
     umask = os.umask(0)
     os.umask(umask)
     return umask
+
+
+def test_regenerate_messages_holds_the_partition_lock(tmp_path: Path) -> None:
+    writer = make_writer(tmp_path)
+    append_text(writer, "01J_MSG_ONE", "2026-07-12T10:00:00+09:00", "one")
+    lock_path = partition_path(tmp_path, "2026-07") / ".write.lock"
+    lock_states: list[bool] = []
+
+    def record_lock_state(messages_path: Path) -> None:
+        probe_fd = os.open(lock_path, os.O_RDONLY)
+        try:
+            fcntl.flock(probe_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(probe_fd, fcntl.LOCK_UN)
+            lock_states.append(False)
+        except BlockingIOError:
+            lock_states.append(True)
+        finally:
+            os.close(probe_fd)
+
+    writer.hooks = StorageWriteHooks(before_messages_write=record_lock_state)
+    writer.regenerate_messages("2026-07")
+
+    assert lock_states == [True]

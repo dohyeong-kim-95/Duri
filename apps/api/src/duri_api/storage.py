@@ -220,12 +220,24 @@ class DuriStorageWriter:
             temp_path.unlink(missing_ok=True)
 
     def regenerate_messages(self, period: str) -> str:
-        partition = self._partition_path(period)
-        metadata = self._read_metadata(period)
-        content = _render_messages_markdown(metadata)
-        messages_path = partition / "messages.md"
-        self._write_messages(messages_path, content)
-        return content
+        """Rebuild messages.md from metadata.json under the partition lock.
+
+        Holding the lock keeps a concurrent append from being overwritten by a
+        messages.md rendered from older metadata.
+
+        Args:
+            period: Month partition such as "2026-07".
+
+        Returns:
+            The rendered Markdown that was written.
+        """
+        with self._partition_lock(period):
+            partition = self._partition_path(period)
+            metadata = self._read_metadata(period)
+            content = _render_messages_markdown(metadata)
+            messages_path = partition / "messages.md"
+            self._write_messages(messages_path, content)
+            return content
 
     def recover_orphan_media(self, period: str) -> list[JsonObject]:
         with self._partition_lock(period):
