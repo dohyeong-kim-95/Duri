@@ -582,3 +582,21 @@ def test_env_app_refuses_an_unknown_app_timezone(tmp_path: Path) -> None:
     environ["DURI_APP_TIMEZONE"] = "Mars/Olympus"
     with pytest.raises(ValueError, match="DURI_APP_TIMEZONE"):
         create_app_from_env(environ)
+
+
+def test_partition_lock_file_is_group_only_and_works_when_read_only(tmp_path: Path) -> None:
+    writer = make_writer(tmp_path)
+    append_text(writer, "01J_MSG_ONE", "2026-07-12T10:00:00+09:00", "one")
+    lock_path = partition_path(tmp_path, "2026-07") / ".write.lock"
+
+    assert lock_path.stat().st_mode & 0o777 == 0o660 & ~current_umask()
+
+    lock_path.chmod(0o444)
+    append_text(writer, "01J_MSG_TWO", "2026-07-12T11:00:00+09:00", "two")
+    assert len(read_metadata(tmp_path, "2026-07")["logs"]) == 2  # type: ignore[arg-type]
+
+
+def current_umask() -> int:
+    umask = os.umask(0)
+    os.umask(umask)
+    return umask

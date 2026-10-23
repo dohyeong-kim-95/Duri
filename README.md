@@ -218,6 +218,10 @@ Orphan media 복구(사진 rename 뒤 `metadata.json` 쓰기 전에 끊긴 경�
 .venv/bin/python -m duri_api.recover --storage-root /path/to/DuriStorage
 ```
 
+복구 CLI는 **서버와 같은 사용자로** 실행한다(`sudo -u <서버 사용자> ...`). 각 달의
+`.write.lock`은 서버와 CLI가 함께 잡는 락 파일이라, root로 돌리면 서버가 못 여는 파일이
+생길 수 있다(새로 만들 때 모드 `0o660`, umask 적용).
+
 `--timezone`을 생략하면 서버와 같은 `DURI_APP_TIMEZONE`(기본 `Asia/Seoul`)을 쓴다.
 서버와 다른 값을 주면 새로 만든 달이 다른 timezone으로 기록돼 서버가 그 달에 쓰지 못한다.
 

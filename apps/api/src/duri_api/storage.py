@@ -33,6 +33,7 @@ DEFAULT_APP_TIMEZONE = "Asia/Seoul"
 APP_TIMEZONE_ENV_VAR = "DURI_APP_TIMEZONE"
 MAX_PHOTO_NAME_ATTEMPTS = 100
 PARTITION_LOCK_FILENAME = ".write.lock"
+PARTITION_LOCK_MODE = 0o660
 
 logger = logging.getLogger(__name__)
 
@@ -331,12 +332,22 @@ class DuriStorageWriter:
         partition = self._partition_path(period)
         partition.mkdir(parents=True, exist_ok=True)
         with self._lock_for(period):
-            with (partition / PARTITION_LOCK_FILENAME).open("a") as lock_file:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            # flock works on a read-only fd, so a lock file someone else created
+            # (readable by the server user) never blocks writes; mode 0o660 is
+            # further narrowed by the umask.
+            lock_fd = os.open(
+                partition / PARTITION_LOCK_FILENAME,
+                os.O_RDONLY | os.O_CREAT,
+                PARTITION_LOCK_MODE,
+            )
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX)
                 try:
                     yield
                 finally:
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
 
     def _append_log_locked(self, period: str, log: JsonObject) -> JsonObject:
         """Append a Log to the period's metadata.json, idempotently.
