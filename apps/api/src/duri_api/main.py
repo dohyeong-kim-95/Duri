@@ -137,8 +137,10 @@ def create_app(
     async def health() -> dict[str, str]:
         return health_payload()
 
+    # Data handlers are plain `def`: they read files synchronously, so FastAPI runs
+    # them in its threadpool instead of blocking the event loop (and WebSockets).
     @app.get("/timeline", tags=["data"])
-    async def timeline(request: Request) -> dict[str, Any]:
+    def timeline(request: Request) -> dict[str, Any]:
         identity = require_identity(request)
         return {
             "items": read_timeline_logs(
@@ -150,7 +152,7 @@ def create_app(
         }
 
     @app.get("/timeline/summary", tags=["data"])
-    async def timeline_summary(request: Request) -> dict[str, Any]:
+    def timeline_summary(request: Request) -> dict[str, Any]:
         identity = require_identity(request)
         return {
             **read_timeline_summary(storage_root),
@@ -158,14 +160,14 @@ def create_app(
         }
 
     @app.get("/photos/{photo_path:path}", tags=["data"])
-    async def photo(photo_path: str, request: Request) -> dict[str, Any]:
+    def photo(photo_path: str, request: Request) -> dict[str, Any]:
         identity = require_identity(request)
         if storage_root is not None and resolve_storage_path(storage_root, photo_path) is None:
             raise HTTPException(status_code=400, detail="invalid photo path")
         return {"photo_path": photo_path, "identity": identity.as_dict()}
 
     @app.get("/search", tags=["data"])
-    async def search(request: Request) -> dict[str, Any]:
+    def search(request: Request) -> dict[str, Any]:
         identity = require_identity(request)
         query = request.query_params.get("q", "")
         return {
